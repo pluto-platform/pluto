@@ -2,3 +2,6 @@
 /project
 /.bsp
 /.idea
+/generated
+/quartus
+!/quartus/setup_proj.tcl
