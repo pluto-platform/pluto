@@ -1,4 +1,5 @@
 import DE2_115._
+import SRAMTest.State
 import chisel3._
 import chisel3.experimental.{Analog, ChiselEnum, attach}
 import chisel3.stage.{ChiselGeneratorAnnotation, ChiselStage}
@@ -7,9 +8,12 @@ import chisel3.util._
 import java.io.File
 import scala.math.pow
 
-object State extends ChiselEnum {
-  val Idle, write, read, done, error, done2 = Value
+object SRAMTest {
+  object State extends ChiselEnum {
+    val Idle, write, read, done, error, done2 = Value
+  }
 }
+
 
 class SRAMTest extends Module {
 
@@ -98,13 +102,13 @@ class SRAMTest extends Module {
 
 
 
-class Quartus[M <: RawModule](mod: => M)(mapping: M => (Data,Pin)*) extends App {
-  mapping.head(mod)._1.parentPathName
+class Quartus[M <: RawModule](mod: => M)(mapping: M => ((Data,String),Pin)*) extends App {
+
 }
 
 object SRAMTestGen extends Quartus(new SRAMTest)(
-  _.io.error -> LED.R(0),
-  _.io.done -> LED.G(0)
+  _.io.error -> "io_error" -> LED.R(0),
+  _.io.done -> "io_done" -> LED.G(0)
 )
 import sys.process._
 object SRAMTest extends App {

@@ -1,3 +1,7 @@
+import DE2_115.VGA.Color
+import chisel3._
+import chisel3.experimental.Analog
+
 case class Pin(name: String) {
   override def toString = s"PIN_$name"
 }
@@ -23,6 +27,19 @@ object DE2_115 {
     object HS extends Pin("G13") // VGA H_Sync
     object VS extends Pin("C13") // VGA V_Sync
     object SYNC_N extends Pin("C10") // VGA Sync
+    class Color extends Bundle {
+      val r = UInt(8.W)
+      val g = UInt(8.W)
+      val b = UInt(8.W)
+    }
+  }
+  class VGA extends Bundle {
+    val color = Output(new Color)
+    val clk = Output(Clock())
+    val blank_n = Output(Bool())
+    val hsync = Output(Bool())
+    val vsync = Output(Bool())
+    val sync_n = Output(Bool())
   }
   object LCD {
     object DATA extends Pins("L3","L1","L2","K7","K1","K2","M3","M5") // LCD Data
@@ -74,6 +91,127 @@ object DE2_115 {
     object CLK extends Pin("AE5") // SDRAM Clock
     object WE_N extends Pin("V6") // SDRAM Write Enable
     object CS_N extends Pin("T4") // SDRAM Chip Select
+  }
+  class SDRAM extends Bundle {
+    val addr = Output(UInt(13.W))
+    val data = Analog(32.W)
+    val bankAddr = Output(UInt(2.W))
+    val mask = Output(Vec(4,Bool()))
+    val ras_n = Output(Bool())
+    val cas_n = Output(Bool())
+    val clkEn = Output(Bool())
+    val clk = Output(Clock())
+    val we_n = Output(Bool())
+    val cs_n = Output(Bool())
+
+    def deviceDeselect(): Unit = {
+      addr := DontCaree
+      bankAddr := DontCare
+      mask := DontCare
+      ras_n := DontCare
+      cas_n := DontCare
+      we_n := DontCare
+      cs_n := 1.B
+    }
+    def nop(): Unit = {
+      addr := DontCare
+      bankAddr := DontCare
+      mask := DontCare
+      ras_n := 1.B
+      cas_n := 1.B
+      we_n := 1.B
+      cs_n := 0.B
+    }
+    def burstStop(): Unit = {
+      addr := DontCare
+      bankAddr := DontCare
+      mask := DontCare
+      ras_n := 1.B
+      cas_n := 1.B
+      we_n := 0.B
+      cs_n := 0.B
+    }
+    def read(bankAddr: UInt, addr: UInt, mask: Vec[Bool]): Unit = {
+      this.addr := 0.U(1.W) ## addr(9,0)
+      this.bankAddr := bankAddr
+      this.mask := mask
+      ras_n := 1.B
+      cas_n := 0.B
+      we_n := 1.B
+      cs_n := 0.B
+    }
+    def readWithAutoPrecharge(bankAddr: UInt, addr: UInt, mask: Vec[Bool]): Unit = {
+      this.addr := 1.U(1.W) ## addr(9,0)
+      this.bankAddr := bankAddr
+      this.mask := mask
+      ras_n := 1.B
+      cas_n := 0.B
+      we_n := 1.B
+      cs_n := 0.B
+    }
+    def write(bankAddr: UInt, addr: UInt, mask: Vec[Bool]): Unit = {
+      this.addr := 0.U(1.W) ## addr(9,0)
+      this.bankAddr := bankAddr
+      this.mask := mask
+      ras_n := 1.B
+      cas_n := 0.B
+      we_n := 0.B
+      cs_n := 0.B
+    }
+    def writeWithAutoPrecharge(bankAddr: UInt, addr: UInt, mask: Vec[Bool]): Unit = {
+      this.addr := 1.U(1.W) ## addr(9,0)
+      this.bankAddr := bankAddr
+      this.mask := mask
+      ras_n := 1.B
+      cas_n := 0.B
+      we_n := 0.B
+      cs_n := 0.B
+    }
+    def bankActivate(bankAddr: UInt, addr: UInt): Unit = {
+      this.addr := addr(12,0)
+      this.bankAddr := bankAddr
+      mask := DontCare
+      ras_n := 0.B
+      cas_n := 1.B
+      we_n := 1.B
+      cs_n := 0.B
+    }
+    def prechargeSelectBank(bankAddr: UInt): Unit = {
+      this.addr := 0.U(13.W)
+      this.bankAddr := bankAddr
+      mask := DontCare
+      ras_n := 0.B
+      cas_n := 1.B
+      we_n := 0.B
+      cs_n := 0.B
+    }
+    def prechargeAllBanks(bankAddr: UInt): Unit = {
+      addr := (1 << 10).U(13.W)
+      this.bankAddr := bankAddr
+      mask := DontCare
+      ras_n := 0.B
+      cas_n := 1.B
+      we_n := 0.B
+      cs_n := 0.B
+    }
+    def cbrAutoRefresh(): Unit = {
+      addr := DontCare
+      bankAddr := DontCare
+      mask := DontCare
+      ras_n := 0.B
+      cas_n := 0.B
+      we_n := 1.B
+      cs_n := 0.B
+    }
+    def selfRefresh(): Unit = {
+      addr := DontCare
+      bankAddr := DontCare
+      mask := DontCare
+      ras_n := 0.B
+      cas_n := 0.B
+      we_n := 1.B
+      cs_n := 0.B
+    }
   }
   object FLASH {
     object ADDR extends Pins("AG12","AH7","Y13","Y14","Y12","AA13","AA12","AB13","AB12","AB10","AE9","AF9","AA10","AD8","AC8","Y10","AA8","AH12","AC12","AD12","AE10","AD10","AD11") // FLASH Address (23-bit)
