@@ -1,3 +1,5 @@
+package lib.modules
+
 import chisel3._
 import chisel3.experimental.Analog
 import chisel3.util.HasBlackBoxInline
@@ -14,9 +16,9 @@ class TriStateDriver(width: Int) extends BlackBox with HasBlackBoxInline {
     val drive =       Input(Bool())           // when asserted the module drives the bus
   })
 
-  setInline("TriStateDriver.v",
+  setInline("lib.modules.TriStateDriver.v",
     s"""
-       |module TriStateDriver(
+       |module lib.modules.TriStateDriver(
        |    output [${width-1}:0] busData,
        |    input [${width-1}:0] driveData,
        |    inout [${width-1}:0] bus,

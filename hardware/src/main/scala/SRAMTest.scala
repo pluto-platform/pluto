@@ -4,6 +4,7 @@ import chisel3._
 import chisel3.experimental.{Analog, ChiselEnum, attach}
 import chisel3.stage.{ChiselGeneratorAnnotation, ChiselStage}
 import chisel3.util._
+import lib.modules.TriStateDriver
 
 import java.io.File
 import scala.math.pow
@@ -111,7 +112,7 @@ object SRAMTestGen extends Quartus(new SRAMTest)(
   _.io.done -> "io_done" -> LED.G(0)
 )
 import sys.process._
-object SRAMTest extends App {
+object SRAMTestRunner extends App {
   (new ChiselStage).emitVerilog(new SRAMTest, args = Array("--target-dir", "generated"))
 
   println(Process("/opt/intel/21.1/quartus/bin/quartus_sh -t setup_proj.tcl",new File("quartus")).!)

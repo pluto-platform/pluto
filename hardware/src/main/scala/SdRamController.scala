@@ -1,6 +1,7 @@
 import chisel3._
 import chisel3.experimental.ChiselEnum
 import chisel3.util._
+import lib.modules.TriStateDriver
 
 object SdRamController {
 
@@ -11,8 +12,8 @@ object SdRamController {
 
   object Command extends ChiselEnum {
     val ModeRegisterSet = Value(0x00.U)
-    val AutoOrSelfRefresh = , Precharge, BankActivate, Write, Read, BurstStop, Nop = Value
-    val DeviceDeselect = Value()
+    val AutoOrSelfRefresh, Precharge, BankActivate, Write, Read, BurstStop, Nop = Value
+    val DeviceDeselect = Value(0xF.U)
   }
 }
 import SdRamController.State

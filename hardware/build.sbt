@@ -1,11 +1,21 @@
-scalaVersion := "2.12.8"
 
-scalacOptions := Seq("-Xsource:2.11")
+
+scalaVersion := "2.12.13"
+
+scalacOptions ++= Seq(
+  "-deprecation",
+  "-feature",
+  "-unchecked",
+  "-language:reflectiveCalls",
+)
 
 resolvers ++= Seq(
   Resolver.sonatypeRepo("snapshots"),
   Resolver.sonatypeRepo("releases")
 )
 
-libraryDependencies += "edu.berkeley.cs" %% "chisel-iotesters" % "1.4.2"
-libraryDependencies += "edu.berkeley.cs" %% "chiseltest" % "0.2.2"
+val chiselVersion = "3.5.0"
+addCompilerPlugin("edu.berkeley.cs" %% "chisel3-plugin" % chiselVersion cross CrossVersion.full)
+libraryDependencies += "edu.berkeley.cs" %% "chisel3" % chiselVersion
+libraryDependencies += "edu.berkeley.cs" %% "chisel-iotesters" % "2.5.0"
+libraryDependencies += "edu.berkeley.cs" %% "chiseltest" % "0.5.0"

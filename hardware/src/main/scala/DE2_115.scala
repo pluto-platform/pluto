@@ -105,7 +105,7 @@ object DE2_115 {
     val cs_n = Output(Bool())
 
     def deviceDeselect(): Unit = {
-      addr := DontCaree
+      addr := DontCare
       bankAddr := DontCare
       mask := DontCare
       ras_n := DontCare
