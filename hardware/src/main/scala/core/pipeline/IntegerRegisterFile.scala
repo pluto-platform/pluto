@@ -1,6 +1,7 @@
 package core.pipeline
 
 import chisel3._
+import chisel3.stage.ChiselStage
 import chisel3.util.Valid
 
 object IntegerRegisterFile {
@@ -26,9 +27,9 @@ class IntegerRegisterFile extends Module {
 
   })
 
-  val ram = SyncReadMem(32, UInt(32.W))
+  val ram = Mem(32, UInt(32.W))
 
-  val isNotX0 = io.write.bits.address =/= 0.U
+  val isNotX0 = io.write.bits.address.orR
 
   io.source.foreach { source =>
     source.data := Mux(

@@ -43,8 +43,6 @@ class IntegerRegisterFileSpec extends AnyFlatSpec with ChiselScalatestTester {
 
       dut.io.source.zip(address).foreach { case (s,a) => s.address.poke(a) }
 
-      dut.clock.step()
-
       dut.io.source.zip(data).foreach { case (s,d) => s.data.expect(d) }
     }
   }
@@ -60,7 +58,6 @@ class IntegerRegisterFileSpec extends AnyFlatSpec with ChiselScalatestTester {
       dut.io.source.foreach(s => s.address.poke(0.U))
       dut.io.source.foreach(s => s.data.expect(0.U))
 
-      dut.clock.step()
       dut.io.write.bits.address.poke(uRand(1 until 32))
 
       dut.io.source.foreach(s => s.data.expect(0.U))
@@ -101,7 +98,6 @@ class IntegerRegisterFileSpec extends AnyFlatSpec with ChiselScalatestTester {
       (0 until 32).zip(data).foreach { case (a,d) =>
         dut.io.source.foreach { s =>
           s.address.poke(a.U)
-          dut.clock.step()
           s.data.expect(if(a == 0) 0.U else d)
         }
       }
