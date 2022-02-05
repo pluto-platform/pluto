@@ -9,7 +9,7 @@ import core.pipeline.InstructionCache.State
 object InstructionCache {
 
   object State extends ChiselEnum {
-    val Hit, Miss = Value
+    val Hit, IssueFetch, WaitForBlock, WriteBlock = Value
   }
 
   case class CacheDimension(size: Int, blockSize: Int) {
@@ -38,6 +38,12 @@ object InstructionCache {
     val byteOffset = UInt(2.W)
   }
 
+  class MemoryInterface(dim: CacheDimension) extends DecoupledIO(new Bundle {
+    val address = Output(UInt(32.W))
+    val length = Output(UInt(dim.blockOffsetWidth.W))
+    val readData = Input(UInt(32.W))
+  })
+
 
 }
 
@@ -51,11 +57,15 @@ class InstructionCache(dim: InstructionCache.CacheDimension) extends Module {
 
     val response = new InstructionCache.ResponsePort
 
+    val memory = new InstructionCache.MemoryInterface(dim)
+
     val invalidate = Input(Bool())
 
   })
 
-  val request = io.request.bits.address.asTypeOf(new InstructionCache.Request(dim))
+  val selectPipedAddress = WireDefault(0.B)
+  val addressPipe = RegInit(0.U(32.W))
+  val request = Mux(selectPipedAddress,addressPipe,io.request.bits.address).asTypeOf(new InstructionCache.Request(dim))
 
   val stateReg = RegInit(State.Hit)
 
@@ -66,15 +76,29 @@ class InstructionCache(dim: InstructionCache.CacheDimension) extends Module {
   val valid = validReg(request.index)
   val tag = tagMem.read(request.index)
   val block = blockMem.read(request.index)
+  val word = block(request.blockOffset ## request.byteOffset)
+
+  val hit = valid && tag === request.tag
 
 
+
+  io.memory.valid := 0.B
+  io.memory.bits.address := addressPipe
+  io.memory.bits.length := dim.blockSize.U
 
   switch(stateReg) {
+    io.response.valid := hit
     is(State.Hit) {
-
+      stateReg := Mux(hit, State.Hit, State.IssueFetch)
     }
-    is(State.Miss) {
-
+    is(State.IssueFetch) {
+      io.response.valid := 0.B
+      io.memory.valid := 1.B
+      stateReg := State.WaitForBlock
+    }
+    is(State.WaitForBlock) {
+      io.response.valid := 0.B
+      when(io.memory.)
     }
   }
 

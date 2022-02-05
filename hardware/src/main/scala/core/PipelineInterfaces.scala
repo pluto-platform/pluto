@@ -7,15 +7,15 @@ import core.pipeline.Instruction
 // funct7(5) ## funct3
 object AluFunction extends ChiselEnum {
   val Addition = Value(0x0.U)
-  val Subtraction = Value(0x8.U)
   val ShiftLeft = Value(0x1.U)
   val CompareSigned = Value(0x2.U)
   val CompareUnsinged = Value(0x3.U)
   val Xor = Value(0x4.U)
   val ShiftRight = Value(0x5.U)
-  val ShiftRightArithmetic = Value(0xD.U)
   val Or = Value(0x6.U)
   val And = Value(0x7.U)
+  val Subtraction = Value(0x8.U)
+  val ShiftRightArithmetic = Value(0xD.U)
 }
 
 object LeftOperand extends ChiselEnum {
@@ -94,7 +94,7 @@ object PipelineInterfaces {
 
 }
 
-abstract class PipelineStage[IN, OUT <: Data](inGen: => IN, outGen: => OUT) extends MultiIOModule {
+abstract class PipelineStage[IN <: Data, OUT <: Data](inGen: => IN, outGen: => OUT) extends MultiIOModule {
   val in = IO(Input(inGen))
   val out = IO(Output(outGen))
 
