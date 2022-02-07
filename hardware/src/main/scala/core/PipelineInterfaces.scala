@@ -98,8 +98,12 @@ abstract class PipelineStage[IN <: Data, OUT <: Data](inGen: => IN, outGen: => O
   val in = IO(Input(inGen))
   val out = IO(Output(outGen))
 
-  val control = IO(new Bundle {
+  val custom: Bundle
 
+  val control = IO(new Bundle {
+    val upstream = Input(inGen)
+    val downstream = Output(outGen)
+    val stall = Input()
   })
 
 
@@ -107,4 +111,5 @@ abstract class PipelineStage[IN <: Data, OUT <: Data](inGen: => IN, outGen: => O
     RegNext(out) <> that.in
     that
   }
+  def stall(): Unit
 }

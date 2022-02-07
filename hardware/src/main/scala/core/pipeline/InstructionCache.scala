@@ -78,7 +78,7 @@ class InstructionCache(dim: InstructionCache.CacheDimension) extends Module {
   val tagMem = SyncReadMem(dim.lines, UInt(dim.tagWidth.W))
   val blockMem = SyncReadMem(dim.lines, Vec(dim.blockSize, UInt(32.W)))
 
-  val valid = validReg(request.index)
+  val valid = validReg(RegNext(request.index))
   val tag = tagMem.read(request.index)
   val block = blockMem.read(request.index)
   val wordOfInterest = block(request.blockOffset)
