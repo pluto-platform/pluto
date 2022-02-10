@@ -11,6 +11,8 @@ import core.pipeline.Instruction
 
 object PipelineInterfaces {
 
+  class ToFetch extends
+
   class FetchToPreDecode extends StageInterface {
     val pc = UInt(32.W)
 

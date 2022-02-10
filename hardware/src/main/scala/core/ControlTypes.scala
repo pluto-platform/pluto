@@ -31,16 +31,18 @@ object ControlTypes {
     val R, I, S, B, U, J = Value
   }
 
-  // (opcode === load/store) ## opcode(5)
+  // opcode(5)
   object MemoryOperation extends ChiselEnum {
-    val None = Value(0x0.U)
-    val Read = Value(0x2.U)
-    val Write = Value(0x3.U)
+    val Read, Write = Value
   }
 
   // funct3(1,0)
   object MemoryAccessWidth extends ChiselEnum {
     val Byte, HalfWord, Word = Value
+  }
+
+  object MemoryAccessResult extends ChiselEnum {
+    val Success, Denied, Failure = Value
   }
 
   object WriteBackSource extends ChiselEnum {
