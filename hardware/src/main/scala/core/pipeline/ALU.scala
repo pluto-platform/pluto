@@ -21,6 +21,7 @@ class ALU extends Module {
   val shamt = uOp(1)(4,0)
 
   io.result := lookUp(io.operation) in (
+    Addition             -> (sOp(0) + sOp(1)).asUInt,
     Subtraction          -> (sOp(0) - sOp(1)).asUInt,
     ShiftLeft            -> (uOp(0) << shamt),
     CompareSigned        -> (sOp(0) < sOp(1)).asUInt,
@@ -30,6 +31,6 @@ class ALU extends Module {
     ShiftRightArithmetic -> (sOp(0) >> shamt).asUInt,
     Or                   -> (uOp(0) | uOp(1)),
     And                  -> (uOp(0) & uOp(1))
-  ) orElse (sOp(0) + sOp(1)).asUInt
+  )
 
 }
