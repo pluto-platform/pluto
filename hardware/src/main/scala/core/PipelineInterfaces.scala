@@ -21,6 +21,7 @@ object PipelineInterfaces {
     val destination = UInt(5.W)
 
     val instruction = UInt(32.W)
+    val validOpcode = Bool()
 
     val branchOffset = SInt(32.W)
 

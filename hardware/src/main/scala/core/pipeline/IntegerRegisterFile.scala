@@ -6,15 +6,17 @@ import chisel3.util.{Valid, ValidIO}
 
 object IntegerRegisterFile {
 
-  class SourcePort extends Bundle {
-    val address = Input(UInt(5.W))
-    val data = Output(UInt(32.W))
+  class SourceRequest extends Bundle {
+    val index = Vec(2,UInt(5.W))
+  }
+  class SourceResponse extends Bundle {
+    val data = Vec(2, UInt(32.W))
   }
 
-  class WritePort extends ValidIO(new Bundle {
-    val address = Input(UInt(5.W))
-    val data = Input(UInt(32.W))
-  })
+  class WriteRequest extends Bundle {
+    val index = UInt(5.W)
+    val data = UInt(32.W)
+  }
 
 }
 
@@ -22,25 +24,28 @@ class IntegerRegisterFile extends Module {
 
   val io = IO(new Bundle {
 
-    val source = Vec(2, new IntegerRegisterFile.SourcePort)
-    val write = Flipped(new IntegerRegisterFile.WritePort)
+    val source = new Bundle {
+      val request = Input(new IntegerRegisterFile.SourceRequest)
+      val response = Output(new IntegerRegisterFile.SourceResponse)
+    }
+    val write = Flipped(Valid(new IntegerRegisterFile.WriteRequest))
 
   })
 
-  val ram = SyncReadMem(32, UInt(32.W))
+  val memory = SyncReadMem(32, UInt(32.W))
 
-  val writeIsNotX0 = io.write.bits.address.orR
+  val writeIsNotX0 = io.write.bits.index.orR
 
-  io.source.foreach { source =>
-    source.data := Mux(
-      io.write.valid && writeIsNotX0 && source.address === io.write.bits.address,
+  io.source.request.index.zip(io.source.response.data).foreach { case (address, data) =>
+    data := Mux(
+      io.write.valid && writeIsNotX0 && address === io.write.bits.index,
       io.write.bits.data,
-      ram.read(source.address)
+      memory.read(address)
     )
   }
 
   when(io.write.valid && writeIsNotX0) {
-    ram.write(io.write.bits.address, io.write.bits.data)
+    memory.write(io.write.bits.index, io.write.bits.data)
   }
 
 }
