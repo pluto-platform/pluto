@@ -21,7 +21,7 @@ class Fetch extends PipelineStage(new ToFetch, new FetchToDecode) {
   })
 
 
-  val instruction = io.instructionResponse.bits.instruction
+  val instruction = Mux(io.instructionResponse.valid, io.instructionResponse.bits.instruction, 0x13.U)
   val branchOffset = instruction.extractImmediate.bType
   val (opcode, validOpcode) = Opcode.safe(instruction(6,0))
   val source = VecInit(instruction(19,15), instruction(24,20))
