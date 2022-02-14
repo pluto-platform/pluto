@@ -16,9 +16,10 @@ class IntegerRegisterFileSpec extends AnyFlatSpec with ChiselScalatestTester {
     test(new IntegerRegisterFile) { dut =>
       val (address,data) = (uRand(1 until 32),uRand(32.W))
 
-      dut.io.write.send((new WritePort).Lit(
-        _.address -> address,
-        _.data -> data
+      dut.io.write.poke((new WritePort).Lit(
+        _.bits.address -> address,
+        _.bits.data -> data,
+        _.valid -> 1.B
       ))
       dut.io.source.foreach(s => s.address.poke(address))
 
@@ -31,9 +32,10 @@ class IntegerRegisterFileSpec extends AnyFlatSpec with ChiselScalatestTester {
       val (address,data) = (uRands(1 until 32, 1 until 32), uRands(32.W, 32.W))
 
       address.zip(data).foreach { case (a,d) =>
-        dut.io.write.send((new WritePort).Lit(
-          _.address -> a,
-          _.data -> d
+        dut.io.write.poke((new WritePort).Lit(
+          _.bits.address -> a,
+          _.bits.data -> d,
+          _.valid -> 1.B
         ))
 
         dut.clock.step()
@@ -51,9 +53,10 @@ class IntegerRegisterFileSpec extends AnyFlatSpec with ChiselScalatestTester {
     test(new IntegerRegisterFile) { dut =>
       val data = uRand(32.W)
 
-      dut.io.write.send((new WritePort).Lit(
-        _.address -> 0.U,
-        _.data -> data
+      dut.io.write.poke((new WritePort).Lit(
+        _.bits.address -> 0.U,
+        _.bits.data -> data,
+        _.valid -> 1.B
       ))
       dut.io.source.foreach(s => s.address.poke(0.U))
       dut.io.source.foreach(s => s.data.expect(0.U))
@@ -69,9 +72,10 @@ class IntegerRegisterFileSpec extends AnyFlatSpec with ChiselScalatestTester {
     test(new IntegerRegisterFile) { dut =>
       val data = uRand(1 until 1024)
 
-      dut.io.write.send((new WritePort).Lit(
-        _.address -> 0.U,
-        _.data -> data
+      dut.io.write.poke((new WritePort).Lit(
+        _.bits.address -> 0.U,
+        _.bits.data -> data,
+        _.valid -> 1.B
       ))
       dut.io.source.foreach(s => s.address.poke(0.U))
 
@@ -85,9 +89,10 @@ class IntegerRegisterFileSpec extends AnyFlatSpec with ChiselScalatestTester {
       val data = Seq.fill(32)(uRand(32.W))
 
       (0 until 32).zip(data).foreach { case (a,d) =>
-        dut.io.write.send((new WritePort).Lit(
-          _.address -> a.U,
-          _.data -> d
+        dut.io.write.poke((new WritePort).Lit(
+          _.bits.address -> a.U,
+          _.bits.data -> d,
+          _.valid -> 1.B
         ))
         dut.clock.step()
       }

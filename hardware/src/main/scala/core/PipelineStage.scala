@@ -7,7 +7,7 @@ class StageInterface extends Bundle {
   val flush = Output(Bool())
 }
 
-abstract class PipelineStage[UP <: StageInterface, DOWN <: StageInterface](up: => UP, down: => DOWN) extends Module {
+abstract class PipelineStage[UP <: Data, DOWN <: Data](up: => UP, down: => DOWN) extends Module {
 
   val upstream = IO(Input(up))
   val downstream = IO(Output(down))

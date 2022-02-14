@@ -3,7 +3,7 @@ import chisel3._
 import chisel3.util.{DecoupledIO, ValidIO}
 import core.ControlTypes.{MemoryAccessResult, MemoryAccessWidth, MemoryOperation}
 import core.pipeline.IntegerRegisterFile
-import core.pipeline.stages.{Decode, Execute, Fetch, Memory, PreDecode, WriteBack}
+import core.pipeline.stages.{Decode, Execute, Fetch, Memory, WriteBack}
 import lib.Interfaces.Channel
 
 
@@ -48,7 +48,6 @@ class Pipeline extends Module {
 
   object Stage {
     val fetch = Module(new Fetch)
-    val preDecode = Module(new PreDecode)
     val decode = Module(new Decode)
     val execute = Module(new Execute)
     val memory = Module(new Memory)

@@ -1,8 +1,8 @@
 package core.pipeline
 
 import chisel3._
-import core.AluFunction
-import core.AluFunction._
+import core.ControlTypes.AluFunction
+import core.ControlTypes.AluFunction._
 import lib.LookUp._
 
 

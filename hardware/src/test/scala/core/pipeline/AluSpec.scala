@@ -2,7 +2,7 @@ package core.pipeline
 
 import chisel3._
 import chiseltest._
-import core.AluFunction
+import core.ControlTypes.AluFunction
 import org.scalatest.flatspec.AnyFlatSpec
 import lib.RandomHelper._
 

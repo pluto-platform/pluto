@@ -11,22 +11,18 @@ import core.pipeline.Instruction
 
 object PipelineInterfaces {
 
-  class ToFetch extends
-
-  class FetchToPreDecode extends StageInterface {
+  class ToFetch extends Bundle {
     val pc = UInt(32.W)
-
-    val control = new Bundle {
-      val branchWasTaken = Bool()
-    }
   }
 
-  class PreDecodeToDecode extends Bundle {
+  class FetchToDecode extends Bundle {
     val pc = UInt(32.W)
     val source = Vec(2, UInt(5.W))
     val destination = UInt(5.W)
 
     val instruction = UInt(32.W)
+
+    val branchOffset = SInt(32.W)
 
     val control = new Bundle {
       val branchWasTaken = Bool()
