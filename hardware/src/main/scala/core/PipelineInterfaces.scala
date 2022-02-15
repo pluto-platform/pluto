@@ -23,10 +23,12 @@ object PipelineInterfaces {
     val instruction = UInt(32.W)
     val validOpcode = Bool()
 
-    val branchOffset = SInt(32.W)
+    val branchTarget = UInt(32.W)
 
     val control = new Bundle {
       val branchWasTaken = Bool()
+      val isJump = Bool()
+      val isBranch = Bool()
       val writeSourceRegister = WriteSourceRegister()
       val leftOperand = LeftOperand()
       val rightOperand = RightOperand()
@@ -40,21 +42,22 @@ object PipelineInterfaces {
     val destination = UInt(5.W)
 
     val operand = Vec(2,UInt(32.W))
+    val writeValue = UInt(32.W)
     val immediate = UInt(32.W)
 
-    val aluControl = new AluControl
 
-    val memoryControl = new MemoryControl
-
-    val writeBackSource = WriteBackSource()
 
     val control = new Bundle {
-      val branchWasTaken = Bool()
+      val isLoad = Bool()
       val allowForwarding = new Bundle {
         val left = Bool()
         val right = Bool()
       }
+      val aluFunction = AluFunction()
 
+      val memoryControl = new MemoryControl
+
+      val writeBackSource = WriteBackSource()
     }
   }
 

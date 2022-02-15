@@ -21,31 +21,32 @@ class Fetch extends PipelineStage(new ToFetch, new FetchToDecode) {
   })
 
 
-  val instruction = Mux(io.instructionResponse.valid, io.instructionResponse.bits.instruction, 0x13.U)
+  val instruction = Mux(io.instructionResponse.valid || control.downstream.flush, io.instructionResponse.bits.instruction, 0x13.U)
   val (opcode, validOpcode) = Opcode.safe(instruction(6,0))
-  val branchOffset = Mux(opcode === Opcode.jal, instruction.extractImmediate.jType, instruction.extractImmediate.bType)
   val source = VecInit(instruction(19,15), instruction(24,20))
   val destination = instruction(11,7)
+  val jump = opcode === Opcode.jal
+  val branchTarget = upstream.pc + Mux(jump, instruction.extractImmediate.jType, instruction.extractImmediate.bType)
 
+  control.downstream := DontCare
 
   io.registerSources.index := source
 
   io.branching.set(
-    _.jump := opcode === Opcode.jal,
+    _.jump := jump,
     _.takeGuess := opcode === Opcode.branch,
-    _.pc := upstream.pc,
-    _.offset := branchOffset
+    _.target := branchTarget
   )
 
   downstream.set(
     _.pc := upstream.pc,
     _.source := source,
     _.destination := destination,
-    _.branchOffset := branchOffset,
+    _.branchTarget := branchTarget,
     _.instruction := instruction,
     _.validOpcode := validOpcode,
     _.control.set(
-      _.branchWasTaken := io.branching.isTakingBranch,
+      _.branchWasTaken := io.branching.guess,
       _.writeSourceRegister := WriteSourceRegister(opcode =/= Opcode.system),
       _.leftOperand := LeftOperand(opcode === Opcode.auipc),
       _.rightOperand := RightOperand(opcode =/= Opcode.branch && opcode =/= Opcode.register),

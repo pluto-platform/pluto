@@ -70,12 +70,6 @@ object ControlTypes {
     val AluResult, MemoryResult = Value
   }
 
-  class AluControl extends Bundle {
-    val aluFunction = AluFunction()
-    val leftOperand = LeftOperand()
-    val rightOperand = RightOperand()
-  }
-
   class MemoryControl extends Bundle {
     val memoryOperation = MemoryOperation()
     val memoryAccessWidth = MemoryAccessWidth()
