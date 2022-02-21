@@ -70,6 +70,13 @@ object ControlTypes {
     val AluResult, MemoryResult, CSRResult = Value
   }
 
+  // funct3(1,0)
+  object BitMaskerFunction extends ChiselEnum {
+    val PassThrough = Value(1.U)
+    val Set = Value(2.U)
+    val Clear = Value(3.U)
+  }
+
   class MemoryControl extends Bundle {
     val memoryOperation = MemoryOperation()
     val memoryAccessWidth = MemoryAccessWidth()

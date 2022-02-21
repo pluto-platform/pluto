@@ -64,22 +64,39 @@ object PipelineInterfaces {
 
   class ExecuteToMemory extends Bundle {
     val pc = UInt(32.W)
-    val AluResult = UInt(32.W)
+    val destination = UInt(5.W)
+
+
+    val aluResult = UInt(32.W)
     val writeData = UInt(32.W)
-    val registerDestination = UInt(5.W)
 
-    val memoryControl = new MemoryControl
 
-    val writeBackSource = WriteBackSource()
+
+    val control = new Bundle {
+      val bitMaskerFunction = BitMaskerFunction()
+      val hasMemoryAccess = Bool()
+      val memory = new MemoryControl
+    }
   }
 
   class MemoryToWriteBack extends Bundle {
     val pc = UInt(32.W)
-    val AluResult = UInt(32.W)
-    val writeData = UInt(32.W)
-    val registerDestination = UInt(5.W)
+    val destination = UInt(5.W)
 
-    val writeBackSource = WriteBackSource()
+    val registerWriteBack = UInt(32.W)
+    val csrWriteBack = new Bundle {
+      val index = UInt(12.W)
+      val value = UInt(32.W)
+    }
+
+    val control = new Bundle {
+      val isLoad = Bool()
+      val write = new Bundle {
+        val registerFile = Bool()
+        val csr = Bool()
+      }
+    }
+
   }
 
 }

@@ -63,9 +63,7 @@ class Fetch extends PipelineStage(new ToFetch, new FetchToDecode) {
 
 
 
-object Emitter extends App {
-  emitVerilog(new Fetch)
-}
+
 
 
 

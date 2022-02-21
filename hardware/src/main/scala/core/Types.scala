@@ -14,3 +14,15 @@ object Branching {
     val target = UInt(32.W)
   }
 }
+
+object Forwarding {
+  class ExecuteChannel extends Bundle {
+    val source = Output(Vec(2, UInt(5.W)))
+    val shouldForward = Input(Vec(2, Bool()))
+    val value = Input(UInt(32.W))
+  }
+  class ProviderChannel extends Bundle {
+    val destination = Output(UInt(5.W))
+    val value = Output(UInt(32.W))
+  }
+}
