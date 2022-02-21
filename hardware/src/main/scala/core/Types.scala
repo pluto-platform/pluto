@@ -6,7 +6,7 @@ object Branching {
   class FetchChannel extends Bundle {
     val takeGuess = Output(Bool())
     val jump = Output(Bool())
-    val target = UInt(32.W)
+    val target = Output(UInt(32.W))
     val guess = Input(Bool())
   }
   class DecodeChannel extends Bundle {

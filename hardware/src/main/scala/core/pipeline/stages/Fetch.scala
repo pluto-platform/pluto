@@ -26,27 +26,31 @@ class Fetch extends PipelineStage(new ToFetch, new FetchToDecode) {
   val source = VecInit(instruction(19,15), instruction(24,20))
   val destination = instruction(11,7)
   val jump = opcode === Opcode.jal
-  val branchTarget = upstream.pc + Mux(jump, instruction.extractImmediate.jType, instruction.extractImmediate.bType)
+  val isBranch = opcode === Opcode.branch
+  val target = (upstream.pc.asSInt + Mux(jump, instruction.extractImmediate.jType, instruction.extractImmediate.bType)).asUInt
 
-  control.downstream := DontCare
+  control.upstream := DontCare
 
   io.registerSources.index := source
 
   io.branching.set(
     _.jump := jump,
-    _.takeGuess := opcode === Opcode.branch,
-    _.target := branchTarget
+    _.takeGuess := isBranch,
+    _.target := target
   )
 
   downstream.set(
     _.pc := upstream.pc,
     _.source := source,
     _.destination := destination,
-    _.branchTarget := branchTarget,
+    _.branchTarget := target,
     _.instruction := instruction,
     _.validOpcode := validOpcode,
     _.control.set(
       _.branchWasTaken := io.branching.guess,
+      _.isJump := opcode === Opcode.jalr,
+      _.isBranch := isBranch,
+      _.destinationIsZero := destination === 0.U,
       _.writeSourceRegister := WriteSourceRegister(opcode =/= Opcode.system),
       _.leftOperand := LeftOperand(opcode === Opcode.auipc),
       _.rightOperand := RightOperand(opcode =/= Opcode.branch && opcode =/= Opcode.register),
@@ -59,7 +63,9 @@ class Fetch extends PipelineStage(new ToFetch, new FetchToDecode) {
 
 
 
-
+object Emitter extends App {
+  emitVerilog(new Fetch)
+}
 
 
 

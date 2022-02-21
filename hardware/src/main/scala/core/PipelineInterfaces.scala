@@ -29,6 +29,7 @@ object PipelineInterfaces {
       val branchWasTaken = Bool()
       val isJump = Bool()
       val isBranch = Bool()
+      val destinationIsZero = Bool()
       val writeSourceRegister = WriteSourceRegister()
       val leftOperand = LeftOperand()
       val rightOperand = RightOperand()

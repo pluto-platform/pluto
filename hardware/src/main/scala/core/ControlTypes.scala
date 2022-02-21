@@ -67,7 +67,7 @@ object ControlTypes {
   }
 
   object WriteBackSource extends ChiselEnum {
-    val AluResult, MemoryResult = Value
+    val AluResult, MemoryResult, CSRResult = Value
   }
 
   class MemoryControl extends Bundle {

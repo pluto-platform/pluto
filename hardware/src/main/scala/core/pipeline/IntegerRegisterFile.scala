@@ -35,17 +35,23 @@ class IntegerRegisterFile extends Module {
   val memory = SyncReadMem(32, UInt(32.W))
 
   val writeIsNotX0 = io.write.bits.index.orR
+  val writeAllowed = writeIsNotX0 && io.write.valid
 
+  // handle both read requests
   io.source.request.index.zip(io.source.response.data).foreach { case (address, data) =>
     data := Mux(
-      io.write.valid && writeIsNotX0 && address === io.write.bits.index,
+      // forward on writes to the same register (unless x0)
+      writeAllowed && address === io.write.bits.index,
       io.write.bits.data,
       memory.read(address)
     )
   }
 
-  when(io.write.valid && writeIsNotX0) {
+  // handle write request
+  when(writeAllowed) {
     memory.write(io.write.bits.index, io.write.bits.data)
   }
 
 }
+
+

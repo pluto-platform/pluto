@@ -64,7 +64,7 @@ class Pipeline extends Module {
     val registerFile = Module(new IntegerRegisterFile)
   }
 
-  Stage.fetch :> StageReg.fetch |> Stage.decode :> StageReg.decode |> Stage.execute :> StageReg.execute |> Stage.memory :> StageReg.memory |> Stage.writeBack
+  //Stage.fetch(StageReg.fetch) |> Stage.decode(StageReg.decode) |> Stage.execute(StageReg.execute) |> Stage.memory(StageReg.memory) |> Stage.writeBack
 
 
 

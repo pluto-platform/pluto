@@ -6,3 +6,6 @@
 /generated
 /quartus
 !/quartus/setup_proj.tcl
+/*.v
+/*.fir
+/*.anno.json

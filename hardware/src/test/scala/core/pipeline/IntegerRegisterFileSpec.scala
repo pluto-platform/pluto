@@ -3,7 +3,7 @@ package core.pipeline
 import chisel3._
 import chisel3.experimental.BundleLiterals.AddBundleLiteralConstructor
 import chiseltest._
-import core.pipeline.IntegerRegisterFile.{WriteRequest}
+import core.pipeline.IntegerRegisterFile.WriteRequest
 import org.scalatest.flatspec.AnyFlatSpec
 import lib.ValidTesting._
 import lib.RandomHelper._
@@ -12,17 +12,16 @@ class IntegerRegisterFileSpec extends AnyFlatSpec with ChiselScalatestTester {
 
   behavior of "IntegerRegisterFile"
 
+  import IntegerRegisterFileSpec.IntegerRegisterFileWrapper
+
   it should "internally forward a value to source" in {
     test(new IntegerRegisterFile) { dut =>
-      val (address,data) = (uRand(1 until 32),uRand(32.W))
+      val (index,data) = (uRand(1 until 32),uRand(32.W))
 
-      dut.io.write.send((new WriteRequest).Lit(
-        _.index -> address,
-        _.data -> data,
-      ))
-      dut.io.source.request.index.foreach(s => s.poke(address))
+      dut.applyWriteRequest(index,data)
+      dut.applyReadRequest.foreach(s => s.poke(index))
 
-      dut.io.source.response.data.foreach(s => s.expect(data))
+      dut.getReadResponse.foreach(s => s.expect(data))
     }
   }
 
@@ -31,21 +30,17 @@ class IntegerRegisterFileSpec extends AnyFlatSpec with ChiselScalatestTester {
       val (address,data) = (uRands(1 until 32, 1 until 32), uRands(32.W, 32.W))
 
       address.zip(data).foreach { case (a,d) =>
-        dut.io.write.send((new WriteRequest).Lit(
-          _.index -> a,
-          _.data -> d
-        ))
-
+        dut.applyWriteRequest(a,d)
         dut.clock.step()
       }
 
-      dut.io.write.choke()
+      dut.unapplyWriteRequest()
 
-      dut.io.source.request.index.zip(address).foreach { case (s,a) => s.poke(a) }
+      dut.applyReadRequest.zip(address).foreach { case (s,a) => s.poke(a) }
 
       dut.clock.step()
 
-      dut.io.source.response.data.zip(data).foreach { case (s,d) => s.expect(d) }
+      dut.getReadResponse.zip(data).foreach { case (s,d) => s.expect(d) }
     }
   }
 
@@ -53,16 +48,13 @@ class IntegerRegisterFileSpec extends AnyFlatSpec with ChiselScalatestTester {
     test(new IntegerRegisterFile) { dut =>
       val data = uRand(32.W)
 
-      dut.io.write.send((new WriteRequest).Lit(
-        _.index -> 0.U,
-        _.data -> data
-      ))
-      dut.io.source.request.index.foreach(s => s.poke(0.U))
-      dut.io.source.response.data.foreach(s => s.expect(0.U))
+      dut.applyWriteRequest(0.U,data)
+      dut.applyReadRequest.foreach(s => s.poke(0.U))
+      dut.getReadResponse.foreach(s => s.expect(0.U))
 
-      dut.io.write.bits.index.poke(uRand(1 until 32))
+      dut.applyReadRequest.foreach(_.poke(uRand(1 until 32)))
 
-      dut.io.source.response.data.foreach(s => s.expect(0.U))
+      dut.getReadResponse.foreach(s => s.expect(0.U))
 
     }
   }
@@ -71,13 +63,10 @@ class IntegerRegisterFileSpec extends AnyFlatSpec with ChiselScalatestTester {
     test(new IntegerRegisterFile) { dut =>
       val data = uRand(1 until 1024)
 
-      dut.io.write.send((new WriteRequest).Lit(
-        _.index -> 0.U,
-        _.data -> data
-      ))
-      dut.io.source.request.index.foreach(s => s.poke(0.U))
+      dut.applyWriteRequest(0.U,data)
+      dut.applyReadRequest.foreach(_.poke(0.U))
 
-      dut.io.source.response.data.foreach(s => s.expect(0.U))
+      dut.getReadResponse.foreach(_.expect(0.U))
 
     }
   }
@@ -87,10 +76,7 @@ class IntegerRegisterFileSpec extends AnyFlatSpec with ChiselScalatestTester {
       val data = Seq.fill(32)(uRand(32.W))
 
       (0 until 32).zip(data).foreach { case (a,d) =>
-        dut.io.write.send((new WriteRequest).Lit(
-          _.index -> a.U,
-          _.data -> d
-        ))
+        dut.applyWriteRequest(a.U,d)
         dut.clock.step()
       }
 
@@ -98,7 +84,7 @@ class IntegerRegisterFileSpec extends AnyFlatSpec with ChiselScalatestTester {
       dut.io.write.choke()
 
       (0 until 32).zip(data).foreach { case (a,d) =>
-        dut.io.source.request.index.zip(dut.io.source.response.data).foreach { case (index,data) =>
+        dut.applyReadRequest.zip(dut.getReadResponse).foreach { case (index,data) =>
           index.poke(a.U)
           dut.clock.step()
           data.expect(if(a == 0) 0.U else d)
@@ -109,4 +95,18 @@ class IntegerRegisterFileSpec extends AnyFlatSpec with ChiselScalatestTester {
   }
 
 
+}
+
+
+object IntegerRegisterFileSpec {
+  implicit class IntegerRegisterFileWrapper(dut: IntegerRegisterFile) {
+    def applyWriteRequest(idx: UInt, data: UInt): Unit = {
+      dut.io.write.valid.poke(1.B)
+      dut.io.write.bits.index.poke(idx)
+      dut.io.write.bits.data.poke(data)
+    }
+    def unapplyWriteRequest(): Unit = dut.io.write.valid.poke(0.B)
+    def applyReadRequest: Vec[UInt] = dut.io.source.request.index
+    def getReadResponse: Vec[UInt] = dut.io.source.response.data
+  }
 }
