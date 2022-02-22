@@ -45,7 +45,3 @@ class WriteBack extends PipelineStage(new MemoryToWriteBack, new Bundle {}) {
 
 
 }
-
-object Emitter extends App {
-  emitVerilog(new WriteBack)
-}

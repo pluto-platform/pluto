@@ -25,6 +25,11 @@ class Memory extends PipelineStage(new ExecuteToMemory, new MemoryToWriteBack) {
     _.function := upstream.control.bitMaskerFunction
   )
 
+  control.upstream.set(
+    _.flush := control.downstream.flush,
+    _.stall := control.downstream.stall || !io.dataRequest.ready
+  )
+
   io.forwarding.set(
     _.destination := upstream.destination,
     _.value := upstream.aluResult
@@ -40,9 +45,28 @@ class Memory extends PipelineStage(new ExecuteToMemory, new MemoryToWriteBack) {
     )
   )
 
-  downstream <> upstream
   downstream.set(
-    _.csrWriteBack := bitMasker.io.result
+    _.pc := upstream.pc,
+    _.destination := upstream.destination,
+    _.csrWriteBack.value := bitMasker.io.result,
+    _.csrWriteBack.index := upstream.csrIndex,
+    _.registerWriteBack := Mux(upstream.control.isCsrAccess, io.csrResponse.value, upstream.aluResult),
+    _.control.set(
+      _.isLoad := upstream.control.isLoad,
+      _.write.csr := upstream.control.isCsrAccess,
+      _.write.registerFile := upstream.control.hasRegisterWriteBack
+    )
   )
 
+  when(!io.dataRequest.ready) {
+    downstream.control.set(
+      _.write.csr := 0.B,
+      _.write.registerFile := 0.B
+    )
+  }
+
+}
+
+object Emitter extends App {
+  emitVerilog(new Memory)
 }

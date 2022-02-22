@@ -66,15 +66,16 @@ object PipelineInterfaces {
     val pc = UInt(32.W)
     val destination = UInt(5.W)
 
-
     val aluResult = UInt(32.W)
     val writeData = UInt(32.W)
-
-
+    val csrIndex = UInt(12.W)
 
     val control = new Bundle {
       val bitMaskerFunction = BitMaskerFunction()
       val hasMemoryAccess = Bool()
+      val isLoad = Bool()
+      val hasRegisterWriteBack = Bool()
+      val isCsrAccess = Bool()
       val memory = new MemoryControl
     }
   }
