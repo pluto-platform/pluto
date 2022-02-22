@@ -82,9 +82,11 @@ object PipelineInterfaces {
 
   class MemoryToWriteBack extends Bundle {
     val pc = UInt(32.W)
-    val destination = UInt(5.W)
 
-    val registerWriteBack = UInt(32.W)
+    val registerWriteBack = new Bundle {
+      val index = UInt(5.W)
+      val value = UInt(32.W)
+    }
     val csrWriteBack = new Bundle {
       val index = UInt(12.W)
       val value = UInt(32.W)
@@ -92,10 +94,8 @@ object PipelineInterfaces {
 
     val control = new Bundle {
       val isLoad = Bool()
-      val write = new Bundle {
-        val registerFile = Bool()
-        val csr = Bool()
-      }
+      val writeRegisterFile = Bool()
+      val writeCsrFile = Bool()
     }
 
   }

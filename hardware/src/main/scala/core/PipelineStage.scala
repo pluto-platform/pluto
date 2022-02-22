@@ -18,7 +18,7 @@ abstract class PipelineStage[UP <: Data, DOWN <: Data](up: => UP, down: => DOWN)
   })
 
 
-  def apply(reg: PipelineRegister[DOWN]): StagePackage[UP,DOWN] = {
+  def :|(reg: PipelineRegister[DOWN]): StagePackage[UP,DOWN] = {
     reg.upstream.data := downstream
     control.downstream := reg.upstream.control
     StagePackage(this, reg)
@@ -32,10 +32,16 @@ case class StagePackage[UP <: Data, DOWN <: Data](stage: PipelineStage[UP,DOWN],
     neighbor.stage.upstream := reg.downstream.data
     neighbor
   }
+  def |>|[S <: PipelineStage[DOWN,_]](neighbor: S): S = {
+    reg.enable := !neighbor.control.upstream.stall
+    reg.downstream.control := neighbor.control.upstream
+    neighbor.upstream := reg.downstream.data
+    neighbor
+  }
 }
 
 object PipelineRegister {
-  def apply[T <: Data](gen: => T): PipelineRegister[T] = new PipelineRegister(gen)
+  def apply[T <: Data](gen: => T): PipelineRegister[T] = Module(new PipelineRegister(gen))
 }
 
 class PipelineRegister[T <: Data](gen: => T) extends Module {
@@ -50,6 +56,6 @@ class PipelineRegister[T <: Data](gen: => T) extends Module {
   val enable = IO(Input(Bool()))
 
   downstream.data := RegEnable(upstream.data, enable)
-  downstream.control := upstream.control
+  upstream.control := downstream.control
 
 }

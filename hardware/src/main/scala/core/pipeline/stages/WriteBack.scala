@@ -19,7 +19,7 @@ class WriteBack extends PipelineStage(new MemoryToWriteBack, new Bundle {}) {
   })
 
 
-  val writeBackValue = Mux(upstream.control.isLoad, io.dataResponse.bits.readData, upstream.registerWriteBack)
+  val writeBackValue = Mux(upstream.control.isLoad, io.dataResponse.bits.readData, upstream.registerWriteBack.value)
 
   control.upstream.set(
     _.flush := 0.B,
@@ -27,21 +27,24 @@ class WriteBack extends PipelineStage(new MemoryToWriteBack, new Bundle {}) {
   )
 
   io.registerFile.set(
-    _.valid := upstream.control.write.registerFile,
-    _.bits.index := upstream.destination,
+    _.valid := upstream.control.writeRegisterFile,
+    _.bits.index := upstream.registerWriteBack.index,
     _.bits.data := writeBackValue
   )
 
   io.csrFile.set(
-    _.valid := upstream.control.write.csr,
+    _.valid := upstream.control.writeCsrFile,
     _.bits.index := upstream.csrWriteBack.index,
     _.bits.value := upstream.csrWriteBack.value
   )
 
   io.forwarding.set(
-    _.destination := upstream.destination,
+    _.destination := upstream.registerWriteBack.index,
     _.value := writeBackValue
   )
 
 
+}
+object Emitter extends App {
+  emitVerilog(new WriteBack)
 }

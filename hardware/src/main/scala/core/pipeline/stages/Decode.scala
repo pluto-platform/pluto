@@ -44,8 +44,8 @@ class Decode extends PipelineStage(new FetchToDecode, new DecodeToExecute) {
 
   downstream.set(
     _.operand(0) := lookUp(upstream.control.leftOperand) in (LeftOperand.Register -> io.registerSources.data(0), LeftOperand.PC -> upstream.pc),
-    _.operand(1) := lookUp(upstream.control.rightOperand) in (RightOperand.Register -> io.registerSources.data(1), RightOperand.Immediate -> immediate),
-    _.immediate := immediate,
+    _.operand(1) := lookUp(upstream.control.rightOperand) in (RightOperand.Register -> io.registerSources.data(1), RightOperand.Immediate -> immediate.asUInt),
+    _.immediate := immediate.asUInt,
     _.writeValue := lookUp(upstream.control.writeSourceRegister) in (WriteSourceRegister.Left -> io.registerSources.data(0), WriteSourceRegister.Right -> io.registerSources.data(1)),
     _.control.set(
       _.isLoad := isLoad,

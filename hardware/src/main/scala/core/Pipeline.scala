@@ -6,6 +6,7 @@ import core.PipelineInterfaces.{DecodeToExecute, ExecuteToMemory, FetchToDecode,
 import core.pipeline.IntegerRegisterFile
 import core.pipeline.stages.{Decode, Execute, Fetch, Memory, WriteBack}
 import lib.Interfaces.Channel
+import lib.util.BundleItemAssignment
 
 
 object Pipeline {
@@ -64,8 +65,15 @@ class Pipeline extends Module {
     val registerFile = Module(new IntegerRegisterFile)
   }
 
-  //Stage.fetch(StageReg.fetch) |> Stage.decode(StageReg.decode) |> Stage.execute(StageReg.execute) |> Stage.memory(StageReg.memory) |> Stage.writeBack
+  (Stage.fetch:|StageReg.fetch) |> (Stage.decode:|StageReg.decode) |> (Stage.execute:|StageReg.execute) |> (Stage.memory:|StageReg.memory) |>| Stage.writeBack
 
+  io.dataChannel.set(
+    _.request <> Stage.memory.io.dataRequest,
+    _.response <> Stage.writeBack.io.dataResponse
+  )
 
+}
 
+object PipelineEmitter extends App {
+  emitVerilog(new Pipeline)
 }
