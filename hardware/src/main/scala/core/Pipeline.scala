@@ -3,7 +3,7 @@ import chisel3._
 import chisel3.util.{DecoupledIO, ValidIO}
 import core.ControlTypes.{MemoryAccessResult, MemoryAccessWidth, MemoryOperation}
 import core.PipelineInterfaces.{DecodeToExecute, ExecuteToMemory, FetchToDecode, MemoryToWriteBack}
-import core.pipeline.{IntegerRegisterFile, ProgramCounter}
+import core.pipeline.{ControlAndStatusRegisterFile, Forwarder, IntegerRegisterFile, LoadUseHazardDetector, ProgramCounter}
 import core.pipeline.stages.{Decode, Execute, Fetch, Memory, WriteBack}
 import lib.Interfaces.Channel
 import lib.util.BundleItemAssignment
@@ -64,6 +64,9 @@ class Pipeline extends Module {
   object Modules {
     val pc = Module(new ProgramCounter)
     val registerFile = Module(new IntegerRegisterFile)
+    val forwader = Module(new Forwarder)
+    val loadUseHazardDetector = Module(new LoadUseHazardDetector)
+    val csrFile = Module(new ControlAndStatusRegisterFile)
   }
 
   Stage.fetch
@@ -92,6 +95,20 @@ class Pipeline extends Module {
     _.source.request <> Stage.fetch.io.registerSources,
     _.source.response <> Stage.decode.io.registerSources,
     _.write <> Stage.writeBack.io.registerFile
+  )
+  Modules.forwader.io.set(
+    _.execute <> Stage.execute.io.forwarding,
+    _.memory <> Stage.memory.io.forwarding,
+    _.writeBack <> Stage.writeBack.io.forwarding
+  )
+  Modules.loadUseHazardDetector.io.set(
+    _.decode <> Stage.decode.io.loadUseHazard,
+    _.execute <> Stage.execute.io.loadUseHazard
+  )
+  Modules.csrFile.io.set(
+    _.readRequest <> Stage.execute.io.csrRequest,
+    _.readResponse <> Stage.memory.io.csrResponse,
+    _.writeRequest <> Stage.writeBack.io.csrFile
   )
 
 }

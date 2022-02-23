@@ -26,4 +26,6 @@ class ControlAndStatusRegisterFile extends Module {
     val writeRequest = Flipped(Valid(new ControlAndStatusRegisterFile.WriteRequest))
   })
 
+  io.readResponse.value := 0.U
+
 }

@@ -26,7 +26,7 @@ object PipelineInterfaces {
     val branchTarget = UInt(32.W)
 
     val control = new Bundle {
-      val branchWasTaken = Bool()
+      val guess = Bool()
       val isJump = Bool()
       val isBranch = Bool()
       val destinationIsZero = Bool()

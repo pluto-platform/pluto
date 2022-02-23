@@ -3,7 +3,7 @@ package core.pipeline.stages
 import chisel3._
 import core.ControlTypes.{AluFunction, BitMaskerFunction, InstructionType, LeftOperand, MemoryAccessWidth, MemoryOperation, RightOperand, WriteBackSource, WriteSourceRegister}
 import core.PipelineInterfaces.{DecodeToExecute, FetchToDecode}
-import core.{Branching, PipelineStage}
+import core.{Branching, LoadUseHazard, PipelineStage}
 import core.pipeline.IntegerRegisterFile
 import lib.Immediates.FromInstructionToImmediate
 import lib.LookUp._
@@ -14,7 +14,8 @@ class Decode extends PipelineStage(new FetchToDecode, new DecodeToExecute) {
 
   val io = IO(new Bundle {
     val registerSources = Input(new IntegerRegisterFile.SourceResponse)
-    val branching = Output(new Branching.DecodeChannel)
+    val branching = new Branching.DecodeChannel
+    val loadUseHazard = new LoadUseHazard.DecodeChannel
   })
 
   val immediate = lookUp(upstream.data.control.instructionType) in (
@@ -40,9 +41,12 @@ class Decode extends PipelineStage(new FetchToDecode, new DecodeToExecute) {
   val isCsrAccess = opcode === Opcode.system && funct3 =/= 0.U
 
   io.branching.set(
-    _.jump := jump,
-    _.target := upstream.data.branchTarget
+    _.decision := jump,
+    _.target := Mux(upstream.data.control.isJump, (immediate + io.registerSources.data(0).asSInt).asUInt, upstream.data.branchTarget),
+    _.guess := upstream.data.control.guess
   )
+
+  io.loadUseHazard.source := upstream.data.source
 
   downstream.data.set(
     _.pc := upstream.data.pc,
@@ -68,7 +72,12 @@ class Decode extends PipelineStage(new FetchToDecode, new DecodeToExecute) {
     )
   )
 
-  when(downstream.flowControl.flush) {
+  upstream.flowControl.set(
+    _.stall := downstream.flowControl.stall || io.loadUseHazard.hazard,
+    _.flush := downstream.flowControl.flush
+  )
+
+  when(downstream.flowControl.flush || io.loadUseHazard.hazard) {
     downstream.data.control.withSideEffects.set(
       _.hasMemoryAccess := 0.B,
       _.isCsrRead := 0.B,

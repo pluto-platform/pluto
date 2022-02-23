@@ -1,6 +1,7 @@
 package core
 
 import chisel3._
+import chisel3.util.Valid
 
 object Branching {
   class FetchChannel extends Bundle {
@@ -10,8 +11,21 @@ object Branching {
     val guess = Input(Bool())
   }
   class DecodeChannel extends Bundle {
-    val jump = Bool()
-    val target = UInt(32.W)
+    val decision = Output(Bool())
+    val target = Output(UInt(32.W))
+    val guess = Output(Bool())
+  }
+  class ProgramCounterChannel extends Bundle {
+    val target = Input(UInt(32.W))
+    val jump = Input(Bool())
+  }
+  class BranchPredictionChannel extends Bundle {
+    val update = Flipped(Valid(new Bundle {
+      val pc = UInt(32.W)
+      val decision = Bool()
+    }))
+    val pc = Input(UInt(32.W))
+    val guess = Output(Bool())
   }
 }
 
