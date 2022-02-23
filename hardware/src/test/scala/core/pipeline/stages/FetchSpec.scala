@@ -10,7 +10,7 @@ class FetchSpec extends AnyFlatSpec with ChiselScalatestTester {
 
   it should "signal to branch predictor to guess" in {
     test(new Fetch) { dut =>
-      dut.upstream.pc.poke(0.U)
+      dut.upstream.data.pc.poke(0.U)
       dut.io.instructionResponse.valid.poke(1.B)
       dut.io.instructionResponse.bits.instruction.poke(0x00820063L.U)
 
@@ -24,7 +24,7 @@ class FetchSpec extends AnyFlatSpec with ChiselScalatestTester {
 
   it should "detect a branch" in {
     test(new Fetch) { dut =>
-      dut.upstream.pc.poke(0.U)
+      dut.upstream.data.pc.poke(0.U)
       dut.io.instructionResponse.valid.poke(1.B)
       dut.io.instructionResponse.bits.instruction.poke(0x00820063L.U)
 
@@ -35,7 +35,7 @@ class FetchSpec extends AnyFlatSpec with ChiselScalatestTester {
 
   it should "calculate the branch target" in {
     test(new Fetch) { dut =>
-      dut.upstream.pc.poke(16.U)
+      dut.upstream.data.pc.poke(16.U)
       dut.io.instructionResponse.valid.poke(1.B)
       dut.io.instructionResponse.bits.instruction.poke(0xfe8208e3L.U)
 
@@ -46,7 +46,7 @@ class FetchSpec extends AnyFlatSpec with ChiselScalatestTester {
 
   it should "detect a jal" in {
     test(new Fetch) { dut =>
-      dut.upstream.pc.poke(0.U)
+      dut.upstream.data.pc.poke(0.U)
       dut.io.instructionResponse.valid.poke(1.B)
       dut.io.instructionResponse.bits.instruction.poke(0xff1ff0efL.U)
 
@@ -57,7 +57,7 @@ class FetchSpec extends AnyFlatSpec with ChiselScalatestTester {
 
   it should "calculate the jal target" in {
     test(new Fetch) { dut =>
-      dut.upstream.pc.poke(16.U)
+      dut.upstream.data.pc.poke(16.U)
       dut.io.instructionResponse.valid.poke(1.B)
       dut.io.instructionResponse.bits.instruction.poke(0xff1ff0efL.U)
 

@@ -21,15 +21,13 @@ class Fetch extends PipelineStage(new ToFetch, new FetchToDecode) {
   })
 
 
-  val instruction = Mux(io.instructionResponse.valid || control.downstream.flush, io.instructionResponse.bits.instruction, 0x13.U)
+  val instruction = Mux(io.instructionResponse.valid || downstream.flowControl.flush, io.instructionResponse.bits.instruction, 0x13.U)
   val (opcode, validOpcode) = Opcode.safe(instruction(6,0))
   val source = VecInit(instruction(19,15), instruction(24,20))
   val destination = instruction(11,7)
   val jump = opcode === Opcode.jal
   val isBranch = opcode === Opcode.branch
-  val target = (upstream.pc.asSInt + Mux(jump, instruction.extractImmediate.jType, instruction.extractImmediate.bType)).asUInt
-
-  control.upstream := DontCare
+  val target = (upstream.data.pc.asSInt + Mux(jump, instruction.extractImmediate.jType, instruction.extractImmediate.bType)).asUInt
 
   io.registerSources.index := source
 
@@ -39,8 +37,8 @@ class Fetch extends PipelineStage(new ToFetch, new FetchToDecode) {
     _.target := target
   )
 
-  downstream.set(
-    _.pc := upstream.pc,
+  downstream.data.set(
+    _.pc := upstream.data.pc,
     _.source := source,
     _.destination := destination,
     _.branchTarget := target,

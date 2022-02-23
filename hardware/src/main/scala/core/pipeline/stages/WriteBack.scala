@@ -18,28 +18,27 @@ class WriteBack extends PipelineStage(new MemoryToWriteBack, new Bundle {}) {
     val dataResponse = Flipped(new DataChannel.Response)
   })
 
+  val writeBackValue = Mux(upstream.data.control.isLoad, io.dataResponse.bits.readData, upstream.data.registerWriteBack.value)
 
-  val writeBackValue = Mux(upstream.control.isLoad, io.dataResponse.bits.readData, upstream.registerWriteBack.value)
-
-  control.upstream.set(
+  upstream.flowControl.set(
     _.flush := 0.B,
-    _.stall := upstream.control.isLoad && !io.dataResponse.valid
+    _.stall := upstream.data.control.isLoad && !io.dataResponse.valid
   )
 
   io.registerFile.set(
-    _.valid := upstream.control.writeRegisterFile,
-    _.bits.index := upstream.registerWriteBack.index,
+    _.valid := upstream.data.control.withSideEffects.writeRegisterFile,
+    _.bits.index := upstream.data.registerWriteBack.index,
     _.bits.data := writeBackValue
   )
 
   io.csrFile.set(
-    _.valid := upstream.control.writeCsrFile,
-    _.bits.index := upstream.csrWriteBack.index,
-    _.bits.value := upstream.csrWriteBack.value
+    _.valid := upstream.data.control.withSideEffects.writeCsrFile,
+    _.bits.index := upstream.data.csrWriteBack.index,
+    _.bits.value := upstream.data.csrWriteBack.value
   )
 
   io.forwarding.set(
-    _.destination := upstream.registerWriteBack.index,
+    _.destination := upstream.data.registerWriteBack.index,
     _.value := writeBackValue
   )
 

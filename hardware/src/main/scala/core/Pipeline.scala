@@ -3,7 +3,7 @@ import chisel3._
 import chisel3.util.{DecoupledIO, ValidIO}
 import core.ControlTypes.{MemoryAccessResult, MemoryAccessWidth, MemoryOperation}
 import core.PipelineInterfaces.{DecodeToExecute, ExecuteToMemory, FetchToDecode, MemoryToWriteBack}
-import core.pipeline.IntegerRegisterFile
+import core.pipeline.{IntegerRegisterFile, ProgramCounter}
 import core.pipeline.stages.{Decode, Execute, Fetch, Memory, WriteBack}
 import lib.Interfaces.Channel
 import lib.util.BundleItemAssignment
@@ -62,14 +62,36 @@ class Pipeline extends Module {
     val memory = PipelineRegister(new MemoryToWriteBack)
   }
   object Modules {
+    val pc = Module(new ProgramCounter)
     val registerFile = Module(new IntegerRegisterFile)
   }
 
-  (Stage.fetch:|StageReg.fetch) |> (Stage.decode:|StageReg.decode) |> (Stage.execute:|StageReg.execute) |> (Stage.memory:|StageReg.memory) |>| Stage.writeBack
+  Stage.fetch
+    .attachRegister(StageReg.fetch)
+    .attachStage(Stage.decode)
+    .attachRegister(StageReg.decode)
+    .attachStage(Stage.execute)
+    .attachRegister(StageReg.execute)
+    .attachStage(Stage.memory)
+    .attachRegister(StageReg.memory)
+    .attachStage(Stage.writeBack)
+
+  Stage.writeBack.downstream.flowControl := 0.U.asTypeOf(new PipelineControl)
+  Stage.fetch.upstream.data.pc := Modules.pc.io.value
 
   io.dataChannel.set(
     _.request <> Stage.memory.io.dataRequest,
     _.response <> Stage.writeBack.io.dataResponse
+  )
+  io.instructionChannel.set(
+    _.request <> Modules.pc.io.instructionRequest,
+    _.response <> Stage.fetch.io.instructionResponse
+  )
+
+  Modules.registerFile.io.set(
+    _.source.request <> Stage.fetch.io.registerSources,
+    _.source.response <> Stage.decode.io.registerSources,
+    _.write <> Stage.writeBack.io.registerFile
   )
 
 }

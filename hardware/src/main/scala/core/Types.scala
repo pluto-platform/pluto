@@ -26,3 +26,14 @@ object Forwarding {
     val value = Output(UInt(32.W))
   }
 }
+
+object LoadUseHazard {
+  class DecodeChannel extends Bundle {
+    val source = Output(Vec(2, UInt(5.W)))
+    val hazard = Input(Bool())
+  }
+  class ExecuteChannel extends Bundle {
+    val destination = Output(UInt(5.W))
+    val isLoad = Output(Bool())
+  }
+}

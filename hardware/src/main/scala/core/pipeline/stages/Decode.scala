@@ -1,7 +1,7 @@
 package core.pipeline.stages
 
 import chisel3._
-import core.ControlTypes.{AluFunction, InstructionType, LeftOperand, RightOperand, WriteBackSource, WriteSourceRegister}
+import core.ControlTypes.{AluFunction, BitMaskerFunction, InstructionType, LeftOperand, MemoryAccessWidth, MemoryOperation, RightOperand, WriteBackSource, WriteSourceRegister}
 import core.PipelineInterfaces.{DecodeToExecute, FetchToDecode}
 import core.{Branching, PipelineStage}
 import core.pipeline.IntegerRegisterFile
@@ -17,13 +17,14 @@ class Decode extends PipelineStage(new FetchToDecode, new DecodeToExecute) {
     val branching = Output(new Branching.DecodeChannel)
   })
 
-  val immediate = lookUp(upstream.control.instructionType) in (
-    InstructionType.I -> upstream.instruction.extractImmediate.iType,
-    InstructionType.U -> upstream.instruction.extractImmediate.uType,
-    InstructionType.S -> upstream.instruction.extractImmediate.sType
+  val immediate = lookUp(upstream.data.control.instructionType) in (
+    InstructionType.I -> upstream.data.instruction.extractImmediate.iType,
+    InstructionType.U -> upstream.data.instruction.extractImmediate.uType,
+    InstructionType.S -> upstream.data.instruction.extractImmediate.sType
   )
-  val funct3 = upstream.instruction(14,12)
-  val opcode = Opcode(upstream.instruction(6,0))
+  val funct3 = upstream.data.instruction(14,12)
+  val funct7 = upstream.data.instruction(31,15)
+  val (opcode,_) = Opcode.safe(upstream.data.instruction(6,0))
   val op = io.registerSources.data
   val comparisons = VecInit(
     op(0) === op(1),
@@ -33,34 +34,46 @@ class Decode extends PipelineStage(new FetchToDecode, new DecodeToExecute) {
     op(0) < op(1),
     op(0) >= op(1)
   )
-  val jump = upstream.control.isJump || (upstream.control.isBranch && comparisons(funct3))
+  val jump = upstream.data.control.isJump || (upstream.data.control.isBranch && comparisons(funct3))
   val isLoad = opcode === Opcode.load
-
+  val isStore = opcode === Opcode.store
+  val isCsrAccess = opcode === Opcode.system && funct3 =/= 0.U
 
   io.branching.set(
     _.jump := jump,
-    _.target := upstream.branchTarget
+    _.target := upstream.data.branchTarget
   )
 
-  downstream.set(
-    _.operand(0) := lookUp(upstream.control.leftOperand) in (LeftOperand.Register -> io.registerSources.data(0), LeftOperand.PC -> upstream.pc),
-    _.operand(1) := lookUp(upstream.control.rightOperand) in (RightOperand.Register -> io.registerSources.data(1), RightOperand.Immediate -> immediate.asUInt),
-    _.immediate := immediate.asUInt,
-    _.writeValue := lookUp(upstream.control.writeSourceRegister) in (WriteSourceRegister.Left -> io.registerSources.data(0), WriteSourceRegister.Right -> io.registerSources.data(1)),
+  downstream.data.set(
+    _.pc := upstream.data.pc,
+    _.operand(0) := lookUp(upstream.data.control.leftOperand) in (LeftOperand.Register -> io.registerSources.data(0), LeftOperand.PC -> upstream.data.pc),
+    _.operand(1) := lookUp(upstream.data.control.rightOperand) in (RightOperand.Register -> io.registerSources.data(1), RightOperand.Immediate -> immediate.asUInt),
+    _.csrIndex := upstream.data.instruction.extractImmediate.iType.apply(11,0),
+    _.writeValue := lookUp(upstream.data.control.writeSourceRegister) in (WriteSourceRegister.Left -> io.registerSources.data(0), WriteSourceRegister.Right -> io.registerSources.data(1)),
+    _.source := upstream.data.source,
+    _.destination := upstream.data.destination,
+    _.funct3 := funct3,
+    _.funct7_5 := funct7(5),
     _.control.set(
+      _.allowForwarding(0) := upstream.data.control.leftOperand === LeftOperand.Register,
+      _.allowForwarding(1) := upstream.data.control.rightOperand === RightOperand.Register,
       _.isLoad := isLoad,
-      _.allowForwarding.left := upstream.control.leftOperand === LeftOperand.Register,
-      _.allowForwarding.right := upstream.control.rightOperand === RightOperand.Register,
-      _.writeBackSource := Mux(isLoad, WriteBackSource.MemoryResult, DontCare)
+      _.memoryOperation := MemoryOperation.safe(opcode.asUInt.apply(5))._1,
+      _.withSideEffects.set(
+        _.hasMemoryAccess := isLoad || isStore,
+        _.isCsrWrite := isCsrAccess,
+        _.isCsrRead := isCsrAccess && !upstream.data.control.destinationIsZero,
+        _.hasRegisterWriteBack := !opcode.isOneOf(Opcode.store, Opcode.branch)
+      )
     )
   )
 
-  when(control.downstream.flush) {
-    downstream.set(
-      _.destination := 0.U,
-      _.control.set(
-        _.isLoad := 0.B,
-      )
+  when(downstream.flowControl.flush) {
+    downstream.data.control.withSideEffects.set(
+      _.hasMemoryAccess := 0.B,
+      _.isCsrRead := 0.B,
+      _.isCsrWrite := 0.B,
+      _.hasRegisterWriteBack := 0.B
     )
   }
 

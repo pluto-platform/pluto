@@ -10,35 +10,24 @@ class PipelineControl extends Bundle {
 
 abstract class PipelineStage[UP <: Data, DOWN <: Data](up: => UP, down: => DOWN) extends Module {
 
-  val upstream = IO(Input(up))
-  val downstream = IO(Output(down))
-  val control = IO(new Bundle {
-    val upstream = Output(new PipelineControl)
-    val downstream = Input(new PipelineControl)
+  val upstream = IO(new Bundle {
+    val data = Input(up)
+    val flowControl = Output(new PipelineControl)
   })
+  val downstream = IO(new Bundle {
+    val data = Output(down)
+    val flowControl = Input(new PipelineControl)
+  })
+  upstream.flowControl := downstream.flowControl
 
-
-  def :|(reg: PipelineRegister[DOWN]): StagePackage[UP,DOWN] = {
-    reg.upstream.data := downstream
-    control.downstream := reg.upstream.control
-    StagePackage(this, reg)
+  def attachRegister(reg: PipelineRegister[DOWN]): PipelineRegister[DOWN] = {
+    reg.upstream.data := downstream.data
+    downstream.flowControl := reg.upstream.flowControl
+    reg
   }
+
 }
 
-case class StagePackage[UP <: Data, DOWN <: Data](stage: PipelineStage[UP,DOWN], reg: PipelineRegister[DOWN]) {
-  def |>[S <: StagePackage[DOWN,_]](neighbor: S): S = {
-    reg.enable := !neighbor.stage.control.upstream.stall
-    reg.downstream.control := neighbor.stage.control.upstream
-    neighbor.stage.upstream := reg.downstream.data
-    neighbor
-  }
-  def |>|[S <: PipelineStage[DOWN,_]](neighbor: S): S = {
-    reg.enable := !neighbor.control.upstream.stall
-    reg.downstream.control := neighbor.control.upstream
-    neighbor.upstream := reg.downstream.data
-    neighbor
-  }
-}
 
 object PipelineRegister {
   def apply[T <: Data](gen: => T): PipelineRegister[T] = Module(new PipelineRegister(gen))
@@ -47,15 +36,21 @@ object PipelineRegister {
 class PipelineRegister[T <: Data](gen: => T) extends Module {
   val upstream = IO(new Bundle {
     val data = Input(gen)
-    val control = Output(new PipelineControl)
+    val flowControl = Output(new PipelineControl)
   })
   val downstream = IO(new Bundle {
     val data = Output(gen)
-    val control = Input(new PipelineControl)
+    val flowControl = Input(new PipelineControl)
   })
   val enable = IO(Input(Bool()))
 
   downstream.data := RegEnable(upstream.data, enable)
-  upstream.control := downstream.control
+  upstream.flowControl := downstream.flowControl
 
+  def attachStage[S <: PipelineStage[T,_]](stage: S): S = {
+    stage.upstream.data := downstream.data
+    downstream.flowControl := stage.upstream.flowControl
+    enable := !stage.upstream.flowControl.stall
+    stage
+  }
 }

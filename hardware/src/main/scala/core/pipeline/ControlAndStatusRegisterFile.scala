@@ -1,6 +1,7 @@
 package core.pipeline
 
 import chisel3._
+import chisel3.util._
 
 object ControlAndStatusRegisterFile {
 
@@ -17,6 +18,12 @@ object ControlAndStatusRegisterFile {
 
 }
 
-class ControlAndStatusRegisterFile {
+class ControlAndStatusRegisterFile extends Module {
+
+  val io = IO(new Bundle {
+    val readRequest = Flipped(Valid(new ControlAndStatusRegisterFile.ReadRequest))
+    val readResponse = new ControlAndStatusRegisterFile.ReadResponse
+    val writeRequest = Flipped(Valid(new ControlAndStatusRegisterFile.WriteRequest))
+  })
 
 }

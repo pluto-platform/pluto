@@ -10,14 +10,14 @@ class ALU extends Module {
 
   val io = IO(new Bundle {
 
-    val operands = Input(Vec(2, UInt(32.W)))
+    val operand = Input(Vec(2, UInt(32.W)))
     val result = Output(UInt(32.W))
     val operation = Input(AluFunction())
 
   })
 
-  val uOp = io.operands
-  val sOp = io.operands.map(_.asSInt)
+  val uOp = io.operand
+  val sOp = io.operand.map(_.asSInt)
   val shamt = uOp(1)(4,0)
 
   io.result := lookUp(io.operation) in (
