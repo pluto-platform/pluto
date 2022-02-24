@@ -35,15 +35,16 @@ class Decode extends PipelineStage(new FetchToDecode, new DecodeToExecute) {
     op(0) < op(1),
     op(0) >= op(1)
   )
-  val jump = upstream.data.control.isJump || (upstream.data.control.isBranch && comparisons(funct3))
+  val jump = upstream.data.control.isJalr || (upstream.data.control.isBranch && comparisons(funct3))
   val isLoad = opcode === Opcode.load
   val isStore = opcode === Opcode.store
   val isCsrAccess = opcode === Opcode.system && funct3 =/= 0.U
 
   io.branching.set(
     _.decision := jump,
-    _.target := Mux(upstream.data.control.isJump, (immediate + io.registerSources.data(0).asSInt).asUInt, upstream.data.branchTarget),
-    _.guess := upstream.data.control.guess
+    _.target := Mux(upstream.data.control.isJalr, (immediate + io.registerSources.data(0).asSInt).asUInt, upstream.data.branchTarget),
+    _.guess := upstream.data.control.guess,
+    _.pc := upstream.data.pc
   )
 
   io.loadUseHazard.source := upstream.data.source
@@ -52,7 +53,7 @@ class Decode extends PipelineStage(new FetchToDecode, new DecodeToExecute) {
     _.pc := upstream.data.pc,
     _.operand(0) := lookUp(upstream.data.control.leftOperand) in (LeftOperand.Register -> io.registerSources.data(0), LeftOperand.PC -> upstream.data.pc),
     _.operand(1) := lookUp(upstream.data.control.rightOperand) in (RightOperand.Register -> io.registerSources.data(1), RightOperand.Immediate -> immediate.asUInt),
-    _.csrIndex := upstream.data.instruction.extractImmediate.iType.apply(11,0),
+    _.csrIndex := immediate(11,0),
     _.writeValue := lookUp(upstream.data.control.writeSourceRegister) in (WriteSourceRegister.Left -> io.registerSources.data(0), WriteSourceRegister.Right -> io.registerSources.data(1)),
     _.source := upstream.data.source,
     _.destination := upstream.data.destination,
@@ -87,4 +88,8 @@ class Decode extends PipelineStage(new FetchToDecode, new DecodeToExecute) {
   }
 
 
+}
+
+object DecodeEmitter extends App {
+  emitVerilog(new Decode)
 }

@@ -3,7 +3,7 @@ import chisel3._
 import chisel3.util.{DecoupledIO, ValidIO}
 import core.ControlTypes.{MemoryAccessResult, MemoryAccessWidth, MemoryOperation}
 import core.PipelineInterfaces.{DecodeToExecute, ExecuteToMemory, FetchToDecode, MemoryToWriteBack}
-import core.pipeline.{ControlAndStatusRegisterFile, Forwarder, IntegerRegisterFile, LoadUseHazardDetector, ProgramCounter}
+import core.pipeline.{BranchingUnit, ControlAndStatusRegisterFile, Forwarder, IntegerRegisterFile, LoadUseHazardDetector, ProgramCounter}
 import core.pipeline.stages.{Decode, Execute, Fetch, Memory, WriteBack}
 import lib.Interfaces.Channel
 import lib.util.BundleItemAssignment
@@ -67,6 +67,7 @@ class Pipeline extends Module {
     val forwader = Module(new Forwarder)
     val loadUseHazardDetector = Module(new LoadUseHazardDetector)
     val csrFile = Module(new ControlAndStatusRegisterFile)
+    val branchingUnit = Module(new BranchingUnit)
   }
 
   Stage.fetch
@@ -91,6 +92,9 @@ class Pipeline extends Module {
     _.response <> Stage.fetch.io.instructionResponse
   )
 
+  Modules.pc.io.set(
+    _.stall := 0.B
+  )
   Modules.registerFile.io.set(
     _.source.request <> Stage.fetch.io.registerSources,
     _.source.response <> Stage.decode.io.registerSources,
@@ -109,6 +113,12 @@ class Pipeline extends Module {
     _.readRequest <> Stage.execute.io.csrRequest,
     _.readResponse <> Stage.memory.io.csrResponse,
     _.writeRequest <> Stage.writeBack.io.csrFile
+  )
+  Modules.branchingUnit.io.set(
+    _.fetch <> Stage.fetch.io.branching,
+    _.decode <> Stage.decode.io.branching,
+    _.pc <> Modules.pc.io.branching,
+    _.predictor := DontCare
   )
 
 }

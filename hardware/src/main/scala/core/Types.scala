@@ -8,11 +8,13 @@ object Branching {
     val takeGuess = Output(Bool())
     val jump = Output(Bool())
     val target = Output(UInt(32.W))
+    val pc = Output(UInt(32.W))
     val guess = Input(Bool())
   }
   class DecodeChannel extends Bundle {
     val decision = Output(Bool())
     val target = Output(UInt(32.W))
+    val pc = Output(UInt(32.W))
     val guess = Output(Bool())
   }
   class ProgramCounterChannel extends Bundle {

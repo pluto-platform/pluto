@@ -13,10 +13,23 @@ class BranchingUnit extends Module {
     val predictor = Flipped(new Branching.BranchPredictionChannel)
   })
 
+  val guess = io.fetch.takeGuess && io.predictor.guess
+  val incorrectGuess = io.decode.decision =/= io.decode.guess
 
-  when(io.decode.decision) {
-    io.pc.jump :=
-    when(!io.decode.guess)
-  }
+  io.predictor.set(
+    _.pc := io.fetch.pc,
+    _.update.valid := incorrectGuess,
+    _.update.bits.set(
+      _.pc := io.decode.pc,
+      _.decision := io.decode.decision
+    )
+  )
+
+  io.fetch.guess := guess
+
+  io.pc.set(
+    _.jump := guess || io.fetch.jump || incorrectGuess,
+    _.target := Mux(incorrectGuess, io.decode.target, io.decode.target)
+  )
 
 }

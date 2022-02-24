@@ -22,12 +22,12 @@ class Execute extends PipelineStage(new DecodeToExecute, new ExecuteToMemory) {
   val alu = Module(new ALU)
   alu.io.set(
     _.operand(0) := Mux(
-      io.forwarding.shouldForward(0) && upstream.data.control.allowForwarding(0),
+      io.forwarding.shouldForward(0) && upstream.data.control.allowForwarding(0), // forward if register operand is used
       io.forwarding.value,
       upstream.data.operand(0)
     ),
     _.operand(1) := Mux(
-      io.forwarding.shouldForward(1) && upstream.data.control.allowForwarding(1),
+      io.forwarding.shouldForward(1) && upstream.data.control.allowForwarding(1), // forward if register operand is used
       io.forwarding.value,
       upstream.data.operand(1)
     ),
@@ -67,3 +67,6 @@ class Execute extends PipelineStage(new DecodeToExecute, new ExecuteToMemory) {
 
 }
 
+object ExecuteEmitter extends App {
+  emitVerilog(new Execute)
+}

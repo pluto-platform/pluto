@@ -14,7 +14,7 @@ class AluSpec extends AnyFlatSpec with ChiselScalatestTester {
     test(new ALU) { dut =>
       val vs = uRands(32.W,32.W)
       dut.io.operation.poke(AluFunction.Addition)
-      dut.io.operands.zip(vs).foreach { case (o,v) => o.poke(v)}
+      dut.io.operand.zip(vs).foreach { case (o,v) => o.poke(v)}
       dut.io.result.expect(vs.map(_.litValue).sum.U)
     }
   }

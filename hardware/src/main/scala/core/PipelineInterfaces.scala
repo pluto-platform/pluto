@@ -3,7 +3,6 @@ package core
 import chisel3._
 import core.ControlTypes._
 import chisel3.experimental.ChiselEnum
-import core.pipeline.Instruction
 
 
 
@@ -27,7 +26,7 @@ object PipelineInterfaces {
 
     val control = new Bundle {
       val guess = Bool()
-      val isJump = Bool()
+      val isJalr = Bool()
       val isBranch = Bool()
       val destinationIsZero = Bool()
       val writeSourceRegister = WriteSourceRegister()

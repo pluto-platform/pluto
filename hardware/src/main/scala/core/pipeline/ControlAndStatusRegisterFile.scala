@@ -22,10 +22,15 @@ class ControlAndStatusRegisterFile extends Module {
 
   val io = IO(new Bundle {
     val readRequest = Flipped(Valid(new ControlAndStatusRegisterFile.ReadRequest))
-    val readResponse = new ControlAndStatusRegisterFile.ReadResponse
+    val readResponse = Output(new ControlAndStatusRegisterFile.ReadResponse)
     val writeRequest = Flipped(Valid(new ControlAndStatusRegisterFile.WriteRequest))
   })
 
-  io.readResponse.value := 0.U
+  val mem = SyncReadMem(1024,UInt(32.W))
+
+  io.readResponse.value := mem.read(io.readRequest.bits.index, io.readRequest.valid)
+  when(io.writeRequest.valid) {
+    mem.write(io.writeRequest.bits.index, io.writeRequest.bits.value)
+  }
 
 }
