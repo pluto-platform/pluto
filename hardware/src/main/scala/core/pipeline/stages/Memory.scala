@@ -30,7 +30,7 @@ class Memory extends PipelineStage(new ExecuteToMemory, new MemoryToWriteBack) {
 
   upstream.flowControl.set(
     _.flush := downstream.flowControl.flush,
-    _.stall := downstream.flowControl.stall || !io.dataRequest.ready
+    _.stall := downstream.flowControl.stall || (!io.dataRequest.ready && upstream.data.control.withSideEffects.hasMemoryAccess)
   )
 
   io.forwarding.set(

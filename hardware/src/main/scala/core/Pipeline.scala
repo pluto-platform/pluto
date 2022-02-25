@@ -93,7 +93,7 @@ class Pipeline extends Module {
   )
 
   Modules.pc.io.set(
-    _.stall := 0.B
+    _.stall := Stage.fetch.upstream.flowControl.stall || !io.instructionChannel.request.ready
   )
   Modules.registerFile.io.set(
     _.source.request <> Stage.fetch.io.registerSources,
@@ -118,7 +118,9 @@ class Pipeline extends Module {
     _.fetch <> Stage.fetch.io.branching,
     _.decode <> Stage.decode.io.branching,
     _.pc <> Modules.pc.io.branching,
-    _.predictor := DontCare
+    _.predictor.set(
+      _.guess := 0.B
+    )
   )
 
 }

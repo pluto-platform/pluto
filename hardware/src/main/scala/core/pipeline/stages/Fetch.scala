@@ -34,6 +34,11 @@ class Fetch extends PipelineStage(new ToFetch, new FetchToDecode) {
 
   io.registerSources.index := source
 
+  upstream.flowControl.set(
+    _.stall := !io.instructionResponse.valid || downstream.flowControl.stall,
+    _.flush := downstream.flowControl.flush
+  )
+
   io.branching.set(
     _.jump := jump,
     _.takeGuess := isBranch,
