@@ -26,7 +26,7 @@ object ControlTypes {
     val Register, PC = Value
   }
   object RightOperand extends ChiselEnum {
-    val Register, Immediate = Value
+    val Register, Immediate, Four = Value
   }
   object WriteSourceRegister extends ChiselEnum {
     val Left, Right = Value

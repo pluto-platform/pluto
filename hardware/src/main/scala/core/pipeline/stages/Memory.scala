@@ -63,7 +63,7 @@ class Memory extends PipelineStage(new ExecuteToMemory, new MemoryToWriteBack) {
     )
   )
 
-  when(!io.dataRequest.ready) {
+  when(!io.dataRequest.ready && upstream.data.control.withSideEffects.hasMemoryAccess) {
     downstream.data.control.withSideEffects.set(
       _.writeCsrFile := 0.B,
       _.writeRegisterFile := 0.B

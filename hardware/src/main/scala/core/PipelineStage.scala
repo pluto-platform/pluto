@@ -44,7 +44,10 @@ class PipelineRegister[T <: Data](gen: => T) extends Module {
   })
   val enable = IO(Input(Bool()))
 
-  downstream.data := RegEnable(upstream.data, enable)
+  val reg = RegInit(0.U.asTypeOf(gen))
+  when(enable) {reg := upstream.data}
+
+  downstream.data := reg
   upstream.flowControl := downstream.flowControl
 
   def attachStage[S <: PipelineStage[T,_]](stage: S): S = {

@@ -7,6 +7,7 @@ import core.PipelineInterfaces._
 import core.pipeline.IntegerRegisterFile
 import core.{Branching, PipelineStage}
 import lib.Immediates.FromInstructionToImmediate
+import lib.LookUp._
 import lib.Opcode
 import lib.util.BundleItemAssignment
 
@@ -31,6 +32,17 @@ class Fetch extends PipelineStage(new ToFetch, new FetchToDecode) {
   val isBranch = opcode === Opcode.branch
   // calculate jump or branch target
   val target = (upstream.data.pc.asSInt + Mux(jump, instruction.extractImmediate.jType, instruction.extractImmediate.bType)).asUInt
+
+  val rightOperand = Mux(
+    opcode.isOneOf(Opcode.jal,Opcode.jalr),
+    RightOperand.Four,
+    Mux(
+      opcode === Opcode.register,
+      RightOperand.Register,
+      RightOperand.Immediate
+    )
+  )
+
 
   io.registerSources.index := source
 
@@ -59,8 +71,8 @@ class Fetch extends PipelineStage(new ToFetch, new FetchToDecode) {
       _.isBranch := isBranch,
       _.destinationIsZero := destination === 0.U,
       _.writeSourceRegister := WriteSourceRegister(opcode =/= Opcode.system),
-      _.leftOperand := LeftOperand(opcode === Opcode.auipc),
-      _.rightOperand := RightOperand(opcode =/= Opcode.branch && opcode =/= Opcode.register),
+      _.leftOperand := LeftOperand(opcode.isOneOf(Opcode.auipc, Opcode.jal, Opcode.jalr)),
+      _.rightOperand := rightOperand,
       _.instructionType := InstructionType.fromOpcode(opcode)
     )
   )

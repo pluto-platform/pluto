@@ -23,18 +23,24 @@ class PipelineTest extends AnyFlatSpec with ChiselScalatestTester {
 
       println(prog.map(_.litValue.toInt.toHexString))
 
-      for(i <- 0 until 2) {
+      for(i <- 0 until 20) {
         dut.io.instructionChannel.request.ready.poke(1.B)
         val address = dut.io.instructionChannel.request.bits.address.peek.litValue.toInt
         dut.clock.step()
         dut.io.instructionChannel.set(
           _.response.valid.poke(1.B),
-          _.response.bits.instruction.poke(prog(address))
+          _.response.bits.instruction.poke(prog(address/4))
         )
 
       }
       dut.clock.step()
     }
   }
+
+}
+
+object PipelineTest {
+
+  def test
 
 }

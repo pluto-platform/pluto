@@ -9,5 +9,8 @@ object LookUp {
     def in[T <: Data](pairs: (S, T)*): T = {
       MuxLookup(key.asUInt, pairs.head._2, pairs.map { case (s, t) => (s.asUInt, t) })
     }
+    def in[T <: Data](default: T, pairs: (S, T)*): T = {
+      MuxLookup(key.asUInt, default, pairs.map { case (s, t) => (s.asUInt, t) })
+    }
   }
 }

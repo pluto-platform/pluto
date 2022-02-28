@@ -52,7 +52,7 @@ class Decode extends PipelineStage(new FetchToDecode, new DecodeToExecute) {
   downstream.data.set(
     _.pc := upstream.data.pc,
     _.operand(0) := lookUp(upstream.data.control.leftOperand) in (LeftOperand.Register -> io.registerSources.data(0), LeftOperand.PC -> upstream.data.pc),
-    _.operand(1) := lookUp(upstream.data.control.rightOperand) in (RightOperand.Register -> io.registerSources.data(1), RightOperand.Immediate -> immediate.asUInt),
+    _.operand(1) := lookUp(upstream.data.control.rightOperand) in (RightOperand.Register -> io.registerSources.data(1), RightOperand.Immediate -> immediate.asUInt, RightOperand.Four -> 4.U),
     _.csrIndex := immediate(11,0),
     _.writeValue := lookUp(upstream.data.control.writeSourceRegister) in (WriteSourceRegister.Left -> io.registerSources.data(0), WriteSourceRegister.Right -> io.registerSources.data(1)),
     _.source := upstream.data.source,
@@ -68,7 +68,7 @@ class Decode extends PipelineStage(new FetchToDecode, new DecodeToExecute) {
         _.hasMemoryAccess := isLoad || isStore,
         _.isCsrWrite := isCsrAccess,
         _.isCsrRead := isCsrAccess && !upstream.data.control.destinationIsZero,
-        _.hasRegisterWriteBack := !opcode.isOneOf(Opcode.store, Opcode.branch)
+        _.hasRegisterWriteBack := !opcode.isOneOf(Opcode.store, Opcode.branch) && opcode.asUInt =/= 0.U && !upstream.data.control.destinationIsZero
       )
     )
   )
