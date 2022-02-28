@@ -18,6 +18,7 @@ class BranchingUnit extends Module {
 
   io.predictor.set(
     _.pc := io.fetch.pc,
+    _.backwards := io.fetch.backwards,
     _.update.valid := incorrectGuess,
     _.update.bits.set(
       _.pc := io.decode.pc,
@@ -28,8 +29,8 @@ class BranchingUnit extends Module {
   io.fetch.guess := guess
 
   io.pc.set(
-    _.jump := guess || io.fetch.jump || incorrectGuess,
-    _.target := Mux(incorrectGuess, io.decode.target, io.decode.target)
+    _.jump := guess || io.fetch.jump || incorrectGuess || io.decode.jump,
+    _.target := Mux(incorrectGuess || io.decode.jump, io.decode.target, io.fetch.target)
   )
 
 }

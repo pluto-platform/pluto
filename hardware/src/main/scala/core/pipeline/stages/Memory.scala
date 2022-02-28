@@ -35,7 +35,8 @@ class Memory extends PipelineStage(new ExecuteToMemory, new MemoryToWriteBack) {
 
   io.forwarding.set(
     _.destination := upstream.data.destination,
-    _.value := upstream.data.aluResult
+    _.value := upstream.data.aluResult,
+    _.destinationIsNonZero := upstream.data.control.destinationIsNonZero
   )
 
   io.dataRequest.set(
@@ -56,6 +57,7 @@ class Memory extends PipelineStage(new ExecuteToMemory, new MemoryToWriteBack) {
     _.registerWriteBack.index := upstream.data.destination,
     _.control.set(
       _.isLoad := upstream.data.control.isLoad,
+      _.destinationIsNonZero := upstream.data.control.destinationIsNonZero,
       _.withSideEffects.set(
         _.writeCsrFile := upstream.data.control.withSideEffects.isCsrWrite,
         _.writeRegisterFile := upstream.data.control.withSideEffects.hasRegisterWriteBack

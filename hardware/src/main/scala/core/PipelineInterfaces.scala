@@ -22,13 +22,15 @@ object PipelineInterfaces {
     val instruction = UInt(32.W)
     val validOpcode = Bool()
 
-    val branchTarget = UInt(32.W)
+    val branchRecoveryTarget = UInt(32.W)
 
     val control = new Bundle {
       val guess = Bool()
       val isJalr = Bool()
       val isBranch = Bool()
-      val destinationIsZero = Bool()
+      val aluFunIsAdd = Bool()
+      val add4 = Bool()
+      val destinationIsNonZero = Bool()
       val writeSourceRegister = WriteSourceRegister()
       val leftOperand = LeftOperand()
       val rightOperand = RightOperand()
@@ -46,11 +48,14 @@ object PipelineInterfaces {
     val csrIndex = UInt(12.W)
 
     val funct3 = UInt(3.W)
-    val funct7_5 = UInt(1.W)
 
     val control = new Bundle {
       val isLoad = Bool()
       val allowForwarding = Vec(2,Bool())
+
+      val destinationIsNonZero = Bool()
+
+      val aluFunction = AluFunction()
 
       val memoryOperation = MemoryOperation()
 
@@ -73,6 +78,7 @@ object PipelineInterfaces {
     val funct3 = UInt(3.W)
 
     val control = new Bundle {
+      val destinationIsNonZero = Bool()
       val isLoad = Bool()
       val memoryOperation = MemoryOperation()
       val withSideEffects = new Bundle {
@@ -97,6 +103,7 @@ object PipelineInterfaces {
 
     val control = new Bundle {
       val isLoad = Bool()
+      val destinationIsNonZero = Bool()
       val withSideEffects = new Bundle {
         val writeRegisterFile = Bool()
         val writeCsrFile = Bool()

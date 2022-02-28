@@ -3,7 +3,7 @@ import chisel3._
 import chisel3.util.{DecoupledIO, ValidIO}
 import core.ControlTypes.{MemoryAccessResult, MemoryAccessWidth, MemoryOperation}
 import core.PipelineInterfaces.{DecodeToExecute, ExecuteToMemory, FetchToDecode, MemoryToWriteBack}
-import core.pipeline.{BranchingUnit, ControlAndStatusRegisterFile, Forwarder, IntegerRegisterFile, LoadUseHazardDetector, ProgramCounter}
+import core.pipeline.{BranchingUnit, ControlAndStatusRegisterFile, Forwarder, IntegerRegisterFile, LoadUseHazardDetector, ProgramCounter, SimpleBranchPredictor}
 import core.pipeline.stages.{Decode, Execute, Fetch, Memory, WriteBack}
 import lib.Interfaces.Channel
 import lib.util.BundleItemAssignment
@@ -68,6 +68,7 @@ class Pipeline extends Module {
     val loadUseHazardDetector = Module(new LoadUseHazardDetector)
     val csrFile = Module(new ControlAndStatusRegisterFile)
     val branchingUnit = Module(new BranchingUnit)
+    val branchPredictor = Module(new SimpleBranchPredictor)
   }
 
   Stage.fetch
@@ -118,9 +119,7 @@ class Pipeline extends Module {
     _.fetch <> Stage.fetch.io.branching,
     _.decode <> Stage.decode.io.branching,
     _.pc <> Modules.pc.io.branching,
-    _.predictor.set(
-      _.guess := 0.B
-    )
+    _.predictor <> Modules.branchPredictor.io
   )
 
 }

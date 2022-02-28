@@ -12,8 +12,8 @@ class Forwarder extends Module {
     val writeBack = Flipped(new Forwarding.ProviderChannel)
   })
 
-  val matchInMem = io.execute.source.map(_ === io.memory.destination)
-  val matchInWb = io.execute.source.map(_ === io.writeBack.destination)
+  val matchInMem = io.execute.source.map(_ === io.memory.destination && io.memory.destinationIsNonZero)
+  val matchInWb = io.execute.source.map(_ === io.writeBack.destination && io.writeBack.destinationIsNonZero)
 
   io.execute.set(
     _.value := Mux(matchInWb(0) || matchInMem(1), io.memory.value, io.writeBack.value),

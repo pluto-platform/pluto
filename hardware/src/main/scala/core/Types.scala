@@ -8,11 +8,13 @@ object Branching {
     val takeGuess = Output(Bool())
     val jump = Output(Bool())
     val target = Output(UInt(32.W))
+    val backwards = Output(Bool())
     val pc = Output(UInt(32.W))
     val guess = Input(Bool())
   }
   class DecodeChannel extends Bundle {
     val decision = Output(Bool())
+    val jump = Output(Bool())
     val target = Output(UInt(32.W))
     val pc = Output(UInt(32.W))
     val guess = Output(Bool())
@@ -27,6 +29,7 @@ object Branching {
       val decision = Bool()
     }))
     val pc = Input(UInt(32.W))
+    val backwards = Input(Bool())
     val guess = Output(Bool())
   }
 }
@@ -39,6 +42,7 @@ object Forwarding {
   }
   class ProviderChannel extends Bundle {
     val destination = Output(UInt(5.W))
+    val destinationIsNonZero = Output(Bool())
     val value = Output(UInt(32.W))
   }
 }

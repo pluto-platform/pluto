@@ -29,20 +29,14 @@ class Fetch extends PipelineStage(new ToFetch, new FetchToDecode) {
   val destination = instruction(11,7)
 
   val jump = opcode === Opcode.jal
+  val isJalr = opcode === Opcode.jalr
   val isBranch = opcode === Opcode.branch
   // calculate jump or branch target
-  val target = (upstream.data.pc.asSInt + Mux(jump, instruction.extractImmediate.jType, instruction.extractImmediate.bType)).asUInt
+  val branchOffset = Mux(jump, instruction.extractImmediate.jType, instruction.extractImmediate.bType)
+  val target = (upstream.data.pc.asSInt + branchOffset).asUInt
 
-  val rightOperand = Mux(
-    opcode.isOneOf(Opcode.jal,Opcode.jalr),
-    RightOperand.Four,
-    Mux(
-      opcode === Opcode.register,
-      RightOperand.Register,
-      RightOperand.Immediate
-    )
-  )
 
+  val isNotRegisterRegisterOperation = opcode =/= Opcode.register
 
   io.registerSources.index := source
 
@@ -55,6 +49,7 @@ class Fetch extends PipelineStage(new ToFetch, new FetchToDecode) {
     _.jump := jump,
     _.takeGuess := isBranch,
     _.target := target,
+    _.backwards := branchOffset < 0.S,
     _.pc := upstream.data.pc
   )
 
@@ -62,17 +57,19 @@ class Fetch extends PipelineStage(new ToFetch, new FetchToDecode) {
     _.pc := upstream.data.pc,
     _.source := source,
     _.destination := destination,
-    _.branchTarget := Mux(io.branching.guess, upstream.data.pc + 4.U, target), // pass on the fallback target, to recover a wrong branch prediction
+    _.branchRecoveryTarget := Mux(io.branching.guess, upstream.data.pc + 4.U, target), // pass on the fallback target, to recover a wrong branch prediction
     _.instruction := instruction,
     _.validOpcode := validOpcode,
     _.control.set(
       _.guess := io.branching.guess,
-      _.isJalr := opcode === Opcode.jalr,
+      _.isJalr := isJalr,
       _.isBranch := isBranch,
-      _.destinationIsZero := destination === 0.U,
+      _.aluFunIsAdd := isNotRegisterRegisterOperation && opcode =/= Opcode.immediate,
+      _.add4 := jump || isJalr,
+      _.destinationIsNonZero := destination =/= 0.U,
       _.writeSourceRegister := WriteSourceRegister(opcode =/= Opcode.system),
-      _.leftOperand := LeftOperand(opcode.isOneOf(Opcode.auipc, Opcode.jal, Opcode.jalr)),
-      _.rightOperand := rightOperand,
+      _.leftOperand := LeftOperand(opcode === Opcode.auipc || jump || isJalr),
+      _.rightOperand := RightOperand(isNotRegisterRegisterOperation),
       _.instructionType := InstructionType.fromOpcode(opcode)
     )
   )

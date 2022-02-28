@@ -21,7 +21,8 @@ class Decode extends PipelineStage(new FetchToDecode, new DecodeToExecute) {
   val immediate = lookUp(upstream.data.control.instructionType) in (
     InstructionType.I -> upstream.data.instruction.extractImmediate.iType,
     InstructionType.U -> upstream.data.instruction.extractImmediate.uType,
-    InstructionType.S -> upstream.data.instruction.extractImmediate.sType
+    InstructionType.S -> upstream.data.instruction.extractImmediate.sType,
+
   )
   val funct3 = upstream.data.instruction(14,12)
   val funct7 = upstream.data.instruction(31,15)
@@ -35,14 +36,15 @@ class Decode extends PipelineStage(new FetchToDecode, new DecodeToExecute) {
     op(0) < op(1),
     op(0) >= op(1)
   )
-  val jump = upstream.data.control.isJalr || (upstream.data.control.isBranch && comparisons(funct3))
+  val branch = upstream.data.control.isBranch && comparisons(funct3)
   val isLoad = opcode === Opcode.load
   val isStore = opcode === Opcode.store
   val isCsrAccess = opcode === Opcode.system && funct3 =/= 0.U
 
   io.branching.set(
-    _.decision := jump,
-    _.target := Mux(upstream.data.control.isJalr, (immediate + io.registerSources.data(0).asSInt).asUInt, upstream.data.branchTarget),
+    _.decision := branch,
+    _.jump := upstream.data.control.isJalr,
+    _.target := Mux(upstream.data.control.isJalr, (immediate + io.registerSources.data(0).asSInt).asUInt, upstream.data.branchRecoveryTarget),
     _.guess := upstream.data.control.guess,
     _.pc := upstream.data.pc
   )
@@ -52,23 +54,24 @@ class Decode extends PipelineStage(new FetchToDecode, new DecodeToExecute) {
   downstream.data.set(
     _.pc := upstream.data.pc,
     _.operand(0) := lookUp(upstream.data.control.leftOperand) in (LeftOperand.Register -> io.registerSources.data(0), LeftOperand.PC -> upstream.data.pc),
-    _.operand(1) := lookUp(upstream.data.control.rightOperand) in (RightOperand.Register -> io.registerSources.data(1), RightOperand.Immediate -> immediate.asUInt, RightOperand.Four -> 4.U),
+    _.operand(1) := Mux(upstream.data.control.add4, 4.U, lookUp(upstream.data.control.rightOperand) in (RightOperand.Register -> io.registerSources.data(1), RightOperand.Immediate -> immediate.asUInt)),
     _.csrIndex := immediate(11,0),
     _.writeValue := lookUp(upstream.data.control.writeSourceRegister) in (WriteSourceRegister.Left -> io.registerSources.data(0), WriteSourceRegister.Right -> io.registerSources.data(1)),
     _.source := upstream.data.source,
     _.destination := upstream.data.destination,
     _.funct3 := funct3,
-    _.funct7_5 := funct7(5),
     _.control.set(
       _.allowForwarding(0) := upstream.data.control.leftOperand === LeftOperand.Register,
       _.allowForwarding(1) := upstream.data.control.rightOperand === RightOperand.Register,
+      _.destinationIsNonZero := upstream.data.control.destinationIsNonZero,
+      _.aluFunction := Mux(upstream.data.control.aluFunIsAdd, AluFunction.Addition, AluFunction.safe(funct7(5) ## funct3)._1),
       _.isLoad := isLoad,
       _.memoryOperation := MemoryOperation.safe(opcode.asUInt.apply(5))._1,
       _.withSideEffects.set(
         _.hasMemoryAccess := isLoad || isStore,
         _.isCsrWrite := isCsrAccess,
-        _.isCsrRead := isCsrAccess && !upstream.data.control.destinationIsZero,
-        _.hasRegisterWriteBack := !opcode.isOneOf(Opcode.store, Opcode.branch) && opcode.asUInt =/= 0.U && !upstream.data.control.destinationIsZero
+        _.isCsrRead := isCsrAccess && upstream.data.control.destinationIsNonZero,
+        _.hasRegisterWriteBack := !opcode.isOneOf(Opcode.store, Opcode.branch) && opcode.asUInt =/= 0.U && upstream.data.control.destinationIsNonZero
       )
     )
   )

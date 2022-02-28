@@ -14,16 +14,12 @@ class PipelineTest extends AnyFlatSpec with ChiselScalatestTester {
     test(new Pipeline).withAnnotations(Seq(WriteVcdAnnotation)) { dut =>
 
       val prog = Seq(
-        0x02000093L,
-        0x04000113L,
-        0x401101b3L,
-        0xfe309ae3L,
-        0xff1ff26fL
+        0x08000093L
       ).map(_.U) ++ Seq.fill(100)(0x13.U)
 
       println(prog.map(_.litValue.toInt.toHexString))
 
-      for(i <- 0 until 20) {
+      for(i <- 0 until 6) {
         dut.io.instructionChannel.request.ready.poke(1.B)
         val address = dut.io.instructionChannel.request.bits.address.peek.litValue.toInt
         dut.clock.step()
@@ -41,6 +37,5 @@ class PipelineTest extends AnyFlatSpec with ChiselScalatestTester {
 
 object PipelineTest {
 
-  def test
 
 }

@@ -8,7 +8,7 @@ import lib.Opcode
 
 
 object ControlTypes {
-  // funct7(5) ## funct3
+  // funct7(5) ## funct3 when Opcode.register or Opcode.immediate
   object AluFunction extends ChiselEnum {
     val Addition = Value(0x0.U)
     val ShiftLeft = Value(0x1.U)
@@ -19,6 +19,7 @@ object ControlTypes {
     val Or = Value(0x6.U)
     val And = Value(0x7.U)
     val Subtraction = Value(0x8.U)
+    val Add4 = Value(0x09.U) // triggered by jal and jalr
     val ShiftRightArithmetic = Value(0xD.U)
   }
 
@@ -26,7 +27,7 @@ object ControlTypes {
     val Register, PC = Value
   }
   object RightOperand extends ChiselEnum {
-    val Register, Immediate, Four = Value
+    val Register, Immediate = Value
   }
   object WriteSourceRegister extends ChiselEnum {
     val Left, Right = Value

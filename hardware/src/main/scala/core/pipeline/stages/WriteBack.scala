@@ -39,7 +39,8 @@ class WriteBack extends PipelineStage(new MemoryToWriteBack, new Bundle {}) {
 
   io.forwarding.set(
     _.destination := upstream.data.registerWriteBack.index,
-    _.value := writeBackValue
+    _.value := writeBackValue,
+    _.destinationIsNonZero := upstream.data.control.destinationIsNonZero
   )
 
 

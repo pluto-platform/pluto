@@ -17,8 +17,6 @@ class Execute extends PipelineStage(new DecodeToExecute, new ExecuteToMemory) {
     val loadUseHazard = new LoadUseHazard.ExecuteChannel
   })
 
-  val (aluFunction,_) = AluFunction.safe(upstream.data.funct7_5 ## upstream.data.funct3)
-
   val alu = Module(new ALU)
   alu.io.set(
     _.operand(0) := Mux(
@@ -31,7 +29,7 @@ class Execute extends PipelineStage(new DecodeToExecute, new ExecuteToMemory) {
       io.forwarding.value,
       upstream.data.operand(1)
     ),
-    _.operation := aluFunction
+    _.operation := upstream.data.control.aluFunction
   )
 
   io.forwarding.source := upstream.data.source
@@ -55,6 +53,7 @@ class Execute extends PipelineStage(new DecodeToExecute, new ExecuteToMemory) {
     _.funct3 := upstream.data.funct3,
     _.control.set(
       _.isLoad := upstream.data.control.isLoad,
+      _.destinationIsNonZero := upstream.data.control.destinationIsNonZero,
       _.memoryOperation := upstream.data.control.memoryOperation,
       _.withSideEffects.set(
         _.hasMemoryAccess := upstream.data.control.withSideEffects.hasMemoryAccess,
