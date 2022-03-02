@@ -25,28 +25,17 @@ class Decode extends PipelineStage(new FetchToDecode, new DecodeToExecute) {
 
   )
   val funct3 = upstream.data.instruction(14,12)
-  val funct7 = upstream.data.instruction(31,15)
+  val funct7 = Mux(upstream.data.control.isNotRegisterRegister, 0.U, upstream.data.instruction(31,15))
   val (opcode,_) = Opcode.safe(upstream.data.instruction(6,0))
-  val op = io.registerSources.data
-  val comparisons = VecInit(
-    op(0) === op(1),
-    op(0) =/= op(1),
-    op(0).asSInt < op(1).asSInt,
-    op(0).asSInt >= op(1).asSInt,
-    op(0) < op(1),
-    op(0) >= op(1)
-  )
-  val branch = upstream.data.control.isBranch && comparisons(funct3)
+
+
   val isLoad = opcode === Opcode.load
   val isStore = opcode === Opcode.store
   val isCsrAccess = opcode === Opcode.system && funct3 =/= 0.U
 
   io.branching.set(
-    _.decision := branch,
     _.jump := upstream.data.control.isJalr,
-    _.target := Mux(upstream.data.control.isJalr, (immediate + io.registerSources.data(0).asSInt).asUInt, upstream.data.branchRecoveryTarget),
-    _.guess := upstream.data.control.guess,
-    _.pc := upstream.data.pc
+    _.target := (io.registerSources.data(0).asSInt + upstream.data.instruction.extractImmediate.iType).asUInt
   )
 
   io.loadUseHazard.source := upstream.data.source
@@ -60,7 +49,10 @@ class Decode extends PipelineStage(new FetchToDecode, new DecodeToExecute) {
     _.source := upstream.data.source,
     _.destination := upstream.data.destination,
     _.funct3 := funct3,
+    _.recoveryTarget := upstream.data.recoveryTarget,
     _.control.set(
+      _.isBranch := upstream.data.control.isBranch,
+      _.guess := upstream.data.control.guess,
       _.allowForwarding(0) := upstream.data.control.leftOperand === LeftOperand.Register,
       _.allowForwarding(1) := upstream.data.control.rightOperand === RightOperand.Register,
       _.destinationIsNonZero := upstream.data.control.destinationIsNonZero,
@@ -78,7 +70,7 @@ class Decode extends PipelineStage(new FetchToDecode, new DecodeToExecute) {
 
   upstream.flowControl.set(
     _.stall := downstream.flowControl.stall || io.loadUseHazard.hazard,
-    _.flush := downstream.flowControl.flush
+    _.flush := downstream.flowControl.flush || upstream.data.control.isJalr
   )
 
   when(downstream.flowControl.flush || io.loadUseHazard.hazard) {

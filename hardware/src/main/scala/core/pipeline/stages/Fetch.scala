@@ -21,8 +21,8 @@ class Fetch extends PipelineStage(new ToFetch, new FetchToDecode) {
     val registerSources = Output(new IntegerRegisterFile.SourceRequest)
   })
 
-  // insert NOP when flushing or when starved by the instruction cache
-  val instruction = Mux(io.instructionResponse.valid || downstream.flowControl.flush, io.instructionResponse.bits.instruction, 0x13.U)
+
+  val instruction = io.instructionResponse.bits.instruction
 
   val (opcode, validOpcode) = Opcode.safe(instruction(6,0))
   val source = VecInit(instruction(19,15), instruction(24,20))
@@ -32,8 +32,9 @@ class Fetch extends PipelineStage(new ToFetch, new FetchToDecode) {
   val isJalr = opcode === Opcode.jalr
   val isBranch = opcode === Opcode.branch
   // calculate jump or branch target
-  val branchOffset = Mux(jump, instruction.extractImmediate.jType, instruction.extractImmediate.bType)
-  val target = (upstream.data.pc.asSInt + branchOffset).asUInt
+  val offset = Mux(jump, instruction.extractImmediate.jType, instruction.extractImmediate.bType)
+  val target = (upstream.data.pc.asSInt + offset).asUInt
+  val nextPc = upstream.data.pc + 4.U
 
 
   val isNotRegisterRegisterOperation = opcode =/= Opcode.register
@@ -49,15 +50,16 @@ class Fetch extends PipelineStage(new ToFetch, new FetchToDecode) {
     _.jump := jump,
     _.takeGuess := isBranch,
     _.target := target,
-    _.backwards := branchOffset < 0.S,
-    _.pc := upstream.data.pc
+    _.backwards := offset < 0.S,
+    _.pc := upstream.data.pc,
+    _.nextPc := nextPc
   )
 
   downstream.data.set(
     _.pc := upstream.data.pc,
     _.source := source,
     _.destination := destination,
-    _.branchRecoveryTarget := Mux(io.branching.guess, upstream.data.pc + 4.U, target), // pass on the fallback target, to recover a wrong branch prediction
+    _.recoveryTarget := Mux(io.branching.guess, nextPc, target), // pass on the fallback target, to recover a wrong branch prediction
     _.instruction := instruction,
     _.validOpcode := validOpcode,
     _.control.set(
@@ -66,13 +68,27 @@ class Fetch extends PipelineStage(new ToFetch, new FetchToDecode) {
       _.isBranch := isBranch,
       _.aluFunIsAdd := isNotRegisterRegisterOperation && opcode =/= Opcode.immediate,
       _.add4 := jump || isJalr,
+      _.isNotRegisterRegister := isNotRegisterRegisterOperation,
       _.destinationIsNonZero := destination =/= 0.U,
       _.writeSourceRegister := WriteSourceRegister(opcode =/= Opcode.system),
       _.leftOperand := LeftOperand(opcode === Opcode.auipc || jump || isJalr),
-      _.rightOperand := RightOperand(isNotRegisterRegisterOperation),
+      _.rightOperand := RightOperand(isNotRegisterRegisterOperation && !isBranch),
       _.instructionType := InstructionType.fromOpcode(opcode)
     )
   )
+  // insert NOP when flushing or when starved by the instruction cache
+  when(downstream.flowControl.flush || !io.instructionResponse.valid) {
+    downstream.data.set(
+      //_.destination := 0.U, maybe?
+      _.instruction := 0x13.U,
+      _.validOpcode := 1.B,
+      _.control.set(
+        _.isJalr := 0.B,
+        _.isBranch := 0.B,
+        _.destinationIsNonZero := 0.B
+      )
+    )
+  }
 
 }
 

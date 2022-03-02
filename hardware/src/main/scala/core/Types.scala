@@ -10,18 +10,21 @@ object Branching {
     val target = Output(UInt(32.W))
     val backwards = Output(Bool())
     val pc = Output(UInt(32.W))
+    val nextPc = Output(UInt(32.W))
     val guess = Input(Bool())
   }
   class DecodeChannel extends Bundle {
-    val decision = Output(Bool())
     val jump = Output(Bool())
     val target = Output(UInt(32.W))
+  }
+  class ExecuteChannel extends Bundle {
+    val decision = Output(Bool())
+    val recoveryTarget = Output(UInt(32.W))
     val pc = Output(UInt(32.W))
     val guess = Output(Bool())
   }
   class ProgramCounterChannel extends Bundle {
-    val target = Input(UInt(32.W))
-    val jump = Input(Bool())
+    val next = Input(UInt(32.W))
   }
   class BranchPredictionChannel extends Bundle {
     val update = Flipped(Valid(new Bundle {

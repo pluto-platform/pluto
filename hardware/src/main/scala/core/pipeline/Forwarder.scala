@@ -16,7 +16,7 @@ class Forwarder extends Module {
   val matchInWb = io.execute.source.map(_ === io.writeBack.destination && io.writeBack.destinationIsNonZero)
 
   io.execute.set(
-    _.value := Mux(matchInWb(0) || matchInMem(1), io.memory.value, io.writeBack.value),
+    _.value := Mux(matchInMem(0) || matchInMem(1), io.memory.value, io.writeBack.value),
     _.shouldForward.zip(matchInMem.zip(matchInWb)).foreach { case (fwd,(mem,wb)) => fwd := mem || wb}
   )
 

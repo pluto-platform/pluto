@@ -33,6 +33,12 @@ class PipelineTest extends AnyFlatSpec with ChiselScalatestTester {
     }
   }
 
+  it should "work" in {
+    test(new Top).withAnnotations(Seq(WriteVcdAnnotation)) {dut =>
+      dut.clock.step(50)
+    }
+  }
+
 }
 
 object PipelineTest {

@@ -16,11 +16,7 @@ class ProgramCounter extends Module{
 
   val reg = RegInit(0.U(32.W))
 
-  val nextReg = Mux(
-    io.branching.jump,
-    io.branching.target,
-    Mux(io.stall, reg, reg + 4.U)
-  )
+  val nextReg = Mux(io.stall, reg, io.branching.next)
   reg := nextReg
 
   io.instructionRequest.set(

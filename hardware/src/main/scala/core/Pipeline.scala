@@ -49,26 +49,26 @@ class Pipeline extends Module {
   val io = IO(new Pipeline.PipelineIO)
 
   object Stage {
-    val fetch = Module(new Fetch)
-    val decode = Module(new Decode)
-    val execute = Module(new Execute)
-    val memory = Module(new Memory)
-    val writeBack = Module(new WriteBack)
+    val fetch = Module(new Fetch).suggestName("stage_fetch")
+    val decode = Module(new Decode).suggestName("stage_decode")
+    val execute = Module(new Execute).suggestName("stage_execute")
+    val memory = Module(new Memory).suggestName("stage_memory")
+    val writeBack = Module(new WriteBack).suggestName("stage_writeback")
   }
   object StageReg {
-    val fetch = PipelineRegister(new FetchToDecode)
-    val decode = PipelineRegister(new DecodeToExecute)
-    val execute = PipelineRegister(new ExecuteToMemory)
-    val memory = PipelineRegister(new MemoryToWriteBack)
+    val fetch = PipelineRegister(new FetchToDecode).suggestName("reg_fetch_decode")
+    val decode = PipelineRegister(new DecodeToExecute).suggestName("reg_decode_execute")
+    val execute = PipelineRegister(new ExecuteToMemory).suggestName("reg_execute_memory")
+    val memory = PipelineRegister(new MemoryToWriteBack).suggestName("reg_memory_writeback")
   }
-  object Modules {
-    val pc = Module(new ProgramCounter)
-    val registerFile = Module(new IntegerRegisterFile)
-    val forwader = Module(new Forwarder)
-    val loadUseHazardDetector = Module(new LoadUseHazardDetector)
-    val csrFile = Module(new ControlAndStatusRegisterFile)
-    val branchingUnit = Module(new BranchingUnit)
-    val branchPredictor = Module(new SimpleBranchPredictor)
+  object hello {
+    val pc = Module(new ProgramCounter).suggestName("pc")
+    val registerFile = Module(new IntegerRegisterFile).suggestName("registerfile")
+    val forwader = Module(new Forwarder).suggestName("forwarder")
+    val loadUseHazardDetector = Module(new LoadUseHazardDetector).suggestName("load_use_hazard_detector")
+    val csrFile = Module(new ControlAndStatusRegisterFile).suggestName("csrfile")
+    val branchingUnit = Module(new BranchingUnit).suggestName("branching_unit")
+    val branchPredictor = Module(new SimpleBranchPredictor).suggestName("branch_predictor")
   }
 
   Stage.fetch
@@ -82,44 +82,45 @@ class Pipeline extends Module {
     .attachStage(Stage.writeBack)
 
   Stage.writeBack.downstream.flowControl := 0.U.asTypeOf(new PipelineControl)
-  Stage.fetch.upstream.data.pc := Modules.pc.io.value
+  Stage.fetch.upstream.data.pc := hello.pc.io.value
 
   io.dataChannel.set(
     _.request <> Stage.memory.io.dataRequest,
     _.response <> Stage.writeBack.io.dataResponse
   )
   io.instructionChannel.set(
-    _.request <> Modules.pc.io.instructionRequest,
+    _.request <> hello.pc.io.instructionRequest,
     _.response <> Stage.fetch.io.instructionResponse
   )
 
-  Modules.pc.io.set(
+  hello.pc.io.set(
     _.stall := Stage.fetch.upstream.flowControl.stall || !io.instructionChannel.request.ready
   )
-  Modules.registerFile.io.set(
+  hello.registerFile.io.set(
     _.source.request <> Stage.fetch.io.registerSources,
     _.source.response <> Stage.decode.io.registerSources,
     _.write <> Stage.writeBack.io.registerFile
   )
-  Modules.forwader.io.set(
+  hello.forwader.io.set(
     _.execute <> Stage.execute.io.forwarding,
     _.memory <> Stage.memory.io.forwarding,
     _.writeBack <> Stage.writeBack.io.forwarding
   )
-  Modules.loadUseHazardDetector.io.set(
+  hello.loadUseHazardDetector.io.set(
     _.decode <> Stage.decode.io.loadUseHazard,
     _.execute <> Stage.execute.io.loadUseHazard
   )
-  Modules.csrFile.io.set(
+  hello.csrFile.io.set(
     _.readRequest <> Stage.execute.io.csrRequest,
     _.readResponse <> Stage.memory.io.csrResponse,
     _.writeRequest <> Stage.writeBack.io.csrFile
   )
-  Modules.branchingUnit.io.set(
+  hello.branchingUnit.io.set(
     _.fetch <> Stage.fetch.io.branching,
     _.decode <> Stage.decode.io.branching,
-    _.pc <> Modules.pc.io.branching,
-    _.predictor <> Modules.branchPredictor.io
+    _.execute <> Stage.execute.io.branching,
+    _.pc <> hello.pc.io.branching,
+    _.predictor <> hello.branchPredictor.io
   )
 
 }

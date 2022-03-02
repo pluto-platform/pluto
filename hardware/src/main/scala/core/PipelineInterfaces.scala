@@ -22,13 +22,14 @@ object PipelineInterfaces {
     val instruction = UInt(32.W)
     val validOpcode = Bool()
 
-    val branchRecoveryTarget = UInt(32.W)
+    val recoveryTarget = UInt(32.W)
 
     val control = new Bundle {
       val guess = Bool()
       val isJalr = Bool()
       val isBranch = Bool()
       val aluFunIsAdd = Bool()
+      val isNotRegisterRegister = Bool()
       val add4 = Bool()
       val destinationIsNonZero = Bool()
       val writeSourceRegister = WriteSourceRegister()
@@ -49,8 +50,12 @@ object PipelineInterfaces {
 
     val funct3 = UInt(3.W)
 
+    val recoveryTarget = UInt(32.W)
+
     val control = new Bundle {
       val isLoad = Bool()
+      val isBranch = Bool()
+      val guess = Bool()
       val allowForwarding = Vec(2,Bool())
 
       val destinationIsNonZero = Bool()
