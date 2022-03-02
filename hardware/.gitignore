@@ -6,6 +6,12 @@
 /generated
 /quartus
 !/quartus/setup_proj.tcl
-/*.v
-/*.fir
-/*.anno.json
+*.v
+*.fir
+*.anno.json
+firrtl_black_box_resource_files.f
+/vivado/*.cache
+/vivado/*.hw
+/vivado/*.ip_user_files
+/vivado/*.runs
+/vivado/*.sim
