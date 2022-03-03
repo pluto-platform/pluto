@@ -4,13 +4,12 @@
 
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
-    let a = hello();
+    let a = hello(2048);
     let _b = a + 10;
     loop {}
 }
-#[no_mangle]
-fn hello() -> i32 {
-    let a = 1;
+
+fn hello(a: i32) -> i32 {
     let b = 2;
     a + b
 }
