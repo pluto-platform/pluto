@@ -12,7 +12,7 @@ class WriteBack extends PipelineStage(new MemoryToWriteBack, new Bundle {}) {
 
 
   val io = IO(new Bundle {
-    val forwarding = new Forwarding.ProviderChannel
+    val forwarding = new Forwarding.WriteBackChannel
     val registerFile = Valid(new IntegerRegisterFile.WriteRequest)
     val csrFile = Valid(new ControlAndStatusRegisterFile.WriteRequest)
     val dataResponse = Flipped(new DataChannel.Response)
@@ -37,11 +37,12 @@ class WriteBack extends PipelineStage(new MemoryToWriteBack, new Bundle {}) {
     _.bits.value := upstream.data.csrWriteBack.value
   )
 
+  /*
   io.forwarding.set(
     _.destination := upstream.data.registerWriteBack.index,
-    _.value := writeBackValue,
+    _.writeBackValue := writeBackValue,
     _.destinationIsNonZero := upstream.data.control.destinationIsNonZero
-  )
+  )*/
 
 
 }

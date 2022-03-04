@@ -3,7 +3,7 @@ import chisel3._
 import chisel3.util.{DecoupledIO, ValidIO}
 import core.ControlTypes.{MemoryAccessResult, MemoryAccessWidth, MemoryOperation}
 import core.PipelineInterfaces.{DecodeToExecute, ExecuteToMemory, FetchToDecode, MemoryToWriteBack}
-import core.pipeline.{BranchingUnit, ControlAndStatusRegisterFile, Forwarder, IntegerRegisterFile, LoadUseHazardDetector, ProgramCounter, SimpleBranchPredictor}
+import core.pipeline.{BranchingUnit, ControlAndStatusRegisterFile, Forwarder, IntegerRegisterFile, HazardDetector, ProgramCounter, SimpleBranchPredictor}
 import core.pipeline.stages.{Decode, Execute, Fetch, Memory, WriteBack}
 import lib.Interfaces.Channel
 import lib.util.BundleItemAssignment
@@ -65,7 +65,7 @@ class Pipeline extends Module {
     val pc = Module(new ProgramCounter).suggestName("pc")
     val registerFile = Module(new IntegerRegisterFile).suggestName("registerfile")
     val forwader = Module(new Forwarder).suggestName("forwarder")
-    val loadUseHazardDetector = Module(new LoadUseHazardDetector).suggestName("load_use_hazard_detector")
+    val loadUseHazardDetector = Module(new HazardDetector).suggestName("load_use_hazard_detector")
     val csrFile = Module(new ControlAndStatusRegisterFile).suggestName("csrfile")
     val branchingUnit = Module(new BranchingUnit).suggestName("branching_unit")
     val branchPredictor = Module(new SimpleBranchPredictor).suggestName("branch_predictor")
@@ -108,7 +108,7 @@ class Pipeline extends Module {
   )
   hello.loadUseHazardDetector.io.set(
     _.decode <> Stage.decode.io.loadUseHazard,
-    _.execute <> Stage.execute.io.loadUseHazard
+    //_.execute <> Stage.execute.io.loadUseHazard
   )
   hello.csrFile.io.set(
     _.readRequest <> Stage.execute.io.csrRequest,

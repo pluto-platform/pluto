@@ -12,7 +12,7 @@ class Memory extends PipelineStage(new ExecuteToMemory, new MemoryToWriteBack) {
 
   val io = IO(new Bundle {
 
-    val forwarding = new Forwarding.ProviderChannel
+    val forwarding = new Forwarding.MemoryChannel
     val dataRequest = new DataChannel.Request
     val csrResponse = Input(new ControlAndStatusRegisterFile.ReadResponse)
 
@@ -33,11 +33,12 @@ class Memory extends PipelineStage(new ExecuteToMemory, new MemoryToWriteBack) {
     _.stall := downstream.flowControl.stall || (!io.dataRequest.ready && upstream.data.control.withSideEffects.hasMemoryAccess)
   )
 
+  /*
   io.forwarding.set(
     _.destination := upstream.data.destination,
-    _.value := upstream.data.aluResult,
+    _.writeBackValue := upstream.data.aluResult,
     _.destinationIsNonZero := upstream.data.control.destinationIsNonZero
-  )
+  )*/
 
   io.dataRequest.set(
     _.valid := upstream.data.control.withSideEffects.hasMemoryAccess,

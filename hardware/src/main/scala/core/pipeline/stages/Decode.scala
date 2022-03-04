@@ -3,7 +3,7 @@ package core.pipeline.stages
 import chisel3._
 import core.ControlTypes.{AluFunction, BitMaskerFunction, InstructionType, LeftOperand, MemoryAccessWidth, MemoryOperation, RightOperand, WriteBackSource, WriteSourceRegister}
 import core.PipelineInterfaces.{DecodeToExecute, FetchToDecode}
-import core.{Branching, LoadUseHazard, PipelineStage}
+import core.{Branching, Hazard, PipelineStage}
 import core.pipeline.IntegerRegisterFile
 import lib.Immediates.FromInstructionToImmediate
 import lib.LookUp._
@@ -15,7 +15,7 @@ class Decode extends PipelineStage(new FetchToDecode, new DecodeToExecute) {
   val io = IO(new Bundle {
     val registerSources = Input(new IntegerRegisterFile.SourceResponse)
     val branching = new Branching.DecodeChannel
-    val loadUseHazard = new LoadUseHazard.DecodeChannel
+    val loadUseHazard = new Hazard.DecodeChannel
   })
 
   val immediate = lookUp(upstream.data.control.instructionType) in (
@@ -38,7 +38,7 @@ class Decode extends PipelineStage(new FetchToDecode, new DecodeToExecute) {
     _.target := (io.registerSources.data(0).asSInt + upstream.data.instruction.extractImmediate.iType).asUInt
   )
 
-  io.loadUseHazard.source := upstream.data.source
+  //io.loadUseHazard.source := upstream.data.source
 
   downstream.data.set(
     _.pc := upstream.data.pc,
@@ -63,7 +63,7 @@ class Decode extends PipelineStage(new FetchToDecode, new DecodeToExecute) {
         _.hasMemoryAccess := isLoad || isStore,
         _.isCsrWrite := isCsrAccess,
         _.isCsrRead := isCsrAccess && upstream.data.control.destinationIsNonZero,
-        _.hasRegisterWriteBack := !opcode.isOneOf(Opcode.store, Opcode.branch) && opcode.asUInt =/= 0.U && upstream.data.control.destinationIsNonZero
+        _.hasRegisterWriteBack := !opcode.isOneOf(Opcode.store, Opcode.branch) && opcode.asUInt =/= 0.U && upstream.data.control.destinationIsNonZero // TODO: move to fetch
       )
     )
   )

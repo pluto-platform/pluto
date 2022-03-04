@@ -5,7 +5,7 @@ import chisel3.util.Valid
 import core.ControlTypes.AluFunction
 import core.PipelineInterfaces.{DecodeToExecute, ExecuteToMemory}
 import core.pipeline.{ALU, ControlAndStatusRegisterFile}
-import core.{Branching, Forwarding, LoadUseHazard, PipelineStage}
+import core.{Branching, Forwarding, Hazard, PipelineStage}
 import lib.util.BundleItemAssignment
 
 class Execute extends PipelineStage(new DecodeToExecute, new ExecuteToMemory) {
@@ -15,18 +15,17 @@ class Execute extends PipelineStage(new DecodeToExecute, new ExecuteToMemory) {
     val branching = new Branching.ExecuteChannel
     val forwarding = new Forwarding.ExecuteChannel
     val csrRequest = Valid(new ControlAndStatusRegisterFile.ReadRequest)
-    val loadUseHazard = new LoadUseHazard.ExecuteChannel
   })
 
   val op = VecInit(
     Mux(
       io.forwarding.shouldForward(0) && upstream.data.control.allowForwarding(0), // forward if register operand is used
-      io.forwarding.value,
+      io.forwarding.forwardedValue,
       upstream.data.operand(0)
     ),
     Mux(
       io.forwarding.shouldForward(1) && upstream.data.control.allowForwarding(1), // forward if register operand is used
-      io.forwarding.value,
+      io.forwarding.forwardedValue,
       upstream.data.operand(1)
     )
   )
@@ -46,7 +45,7 @@ class Execute extends PipelineStage(new DecodeToExecute, new ExecuteToMemory) {
     op(0) >= op(1)
   )
 
-  io.forwarding.source := upstream.data.source
+  //io.forwarding.source := upstream.data.source
 
   val branch = upstream.data.control.isBranch && comparisons(upstream.data.funct3)
   io.branching.set(
@@ -61,10 +60,11 @@ class Execute extends PipelineStage(new DecodeToExecute, new ExecuteToMemory) {
     _.bits.index := upstream.data.csrIndex
   )
 
+  /*
   io.loadUseHazard.set(
     _.isLoad := upstream.data.control.isLoad,
     _.destination := upstream.data.destination
-  )
+  )*/
 
   downstream.data.set(
     _.pc := upstream.data.pc,

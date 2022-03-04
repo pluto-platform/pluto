@@ -32,6 +32,7 @@ object PipelineInterfaces {
       val isNotRegisterRegister = Bool()
       val add4 = Bool()
       val destinationIsNonZero = Bool()
+      val hasRegisterWriteBack = Bool()
       val writeSourceRegister = WriteSourceRegister()
       val leftOperand = LeftOperand()
       val rightOperand = RightOperand()

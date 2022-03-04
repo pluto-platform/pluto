@@ -39,12 +39,7 @@ class IntegerRegisterFile extends Module {
 
   // handle both read requests
   io.source.request.index.zip(io.source.response.data).foreach { case (address, data) =>
-    data := Mux(
-      // forward on writes to the same register (unless x0)
-      io.write.valid && address === io.write.bits.index,
-      io.write.bits.data,
-      memory.read(address)
-    )
+    data := memory.read(address)
   }
 
   // handle write request

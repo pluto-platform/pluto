@@ -5,7 +5,7 @@ import core.ControlTypes.{InstructionType, LeftOperand, RightOperand, WriteSourc
 import core.Pipeline.InstructionChannel
 import core.PipelineInterfaces._
 import core.pipeline.IntegerRegisterFile
-import core.{Branching, PipelineStage}
+import core.{Branching, Forwarding, PipelineStage}
 import lib.Immediates.FromInstructionToImmediate
 import lib.LookUp._
 import lib.Opcode
@@ -19,6 +19,7 @@ class Fetch extends PipelineStage(new ToFetch, new FetchToDecode) {
     val instructionResponse = Flipped(new InstructionChannel.Response)
     val branching = new Branching.FetchChannel
     val registerSources = Output(new IntegerRegisterFile.SourceRequest)
+    val forwarding = new Forwarding.FetchChannel
   })
 
 
@@ -32,7 +33,9 @@ class Fetch extends PipelineStage(new ToFetch, new FetchToDecode) {
   val isJalr = opcode === Opcode.jalr
   val isBranch = opcode === Opcode.branch
   // calculate jump or branch target
-  val offset = Mux(jump, instruction.extractImmediate.jType, instruction.extractImmediate.bType)
+  // TODO: can we use a single bit here?
+  val branchImmediate = instruction.extractImmediate.bType
+  val offset = Mux(jump, instruction.extractImmediate.jType, branchImmediate)
   val target = (upstream.data.pc.asSInt + offset).asUInt
   val nextPc = upstream.data.pc + 4.U
 
@@ -50,9 +53,14 @@ class Fetch extends PipelineStage(new ToFetch, new FetchToDecode) {
     _.jump := jump,
     _.takeGuess := isBranch,
     _.target := target,
-    _.backwards := offset < 0.S,
+    _.backwards := branchImmediate < 0.S,
     _.pc := upstream.data.pc,
     _.nextPc := nextPc
+  )
+
+  io.forwarding.set(
+    _.source := source,
+    _.needsValuesInDecode := isBranch || isJalr
   )
 
   downstream.data.set(
