@@ -1,6 +1,7 @@
 
 ```shell
-cargo objdump --target riscv32i-unknown-none-elf -- -d software
+cargo objdump --target riscv32i-unknown-none-elf --release -- -d software
+cargo objcopy --release -- -O binary boot_sect_simple.bin
 ```
 
 

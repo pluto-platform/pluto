@@ -24,6 +24,8 @@ object PipelineInterfaces {
 
     val recoveryTarget = UInt(32.W)
 
+    val compareSelect = Vec(6, Bool())
+
     val control = new Bundle {
       val guess = Bool()
       val isJalr = Bool()
@@ -60,9 +62,6 @@ object PipelineInterfaces {
     val control = new Bundle {
       val isBranch = Bool()
       val guess = Bool()
-      val allowForwarding = Vec(2,Bool())
-
-      val destinationIsNonZero = Bool()
 
       val aluFunction = AluFunction()
 
@@ -87,8 +86,6 @@ object PipelineInterfaces {
     val funct3 = UInt(3.W)
 
     val control = new Bundle {
-      val destinationIsNonZero = Bool()
-      val isLoad = Bool()
       val memoryOperation = MemoryOperation()
       val withSideEffects = new Bundle {
         val hasMemoryAccess = Bool()
@@ -112,7 +109,6 @@ object PipelineInterfaces {
 
     val control = new Bundle {
       val isLoad = Bool()
-      val destinationIsNonZero = Bool()
       val withSideEffects = new Bundle {
         val writeRegisterFile = Bool()
         val writeCsrFile = Bool()

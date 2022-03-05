@@ -8,14 +8,14 @@ import core.pipeline.IntegerRegisterFile
 import lib.Immediates.FromInstructionToImmediate
 import lib.LookUp._
 import lib.Opcode
-import lib.util.BundleItemAssignment
+import lib.util.{BoolVec, BundleItemAssignment}
 
 class Decode extends PipelineStage(new FetchToDecode, new DecodeToExecute) {
 
   val io = IO(new Bundle {
     val registerSources = Input(new IntegerRegisterFile.SourceResponse)
     val branching = new Branching.DecodeChannel
-    val hazard = new Hazard.DecodeChannel
+    val hazardDetection = new Hazard.DecodeChannel
     val forwarding = new Forwarding.DecodeChannel
   })
 
@@ -34,7 +34,7 @@ class Decode extends PipelineStage(new FetchToDecode, new DecodeToExecute) {
 
   val isCsrAccess = upstream.data.control.isSystem && funct3 =/= 0.U
 
-  val comparisons = VecInit(
+  val comparison = VecInit(
     operand(0) === operand(1),
     operand(0) =/= operand(1),
     operand(0).asSInt < operand(1).asSInt,
@@ -42,8 +42,11 @@ class Decode extends PipelineStage(new FetchToDecode, new DecodeToExecute) {
     operand(0) < operand(1),
     operand(0) >= operand(1)
   )
+    .zip(upstream.data.compareSelect)
+    .map { case (comp,en) => comp && en}
+    .orR
 
-  val branchDecision = upstream.data.control.isBranch && comparisons(funct3)
+  val branchDecision = upstream.data.control.isBranch && comparison
 
   io.branching.set(
     _.jump := upstream.data.control.isJalr,
@@ -59,7 +62,7 @@ class Decode extends PipelineStage(new FetchToDecode, new DecodeToExecute) {
     _.destination := upstream.data.destination
   )
 
-  io.hazard.set(
+  io.hazardDetection.set(
     _.destination := upstream.data.destination,
     _.canForward := upstream.data.control.hasRegisterWriteBack,
     _.isLoad := upstream.data.control.isLoad
@@ -78,9 +81,6 @@ class Decode extends PipelineStage(new FetchToDecode, new DecodeToExecute) {
     _.control.set(
       _.isBranch := upstream.data.control.isBranch,
       _.guess := upstream.data.control.guess,
-      _.allowForwarding(0) := upstream.data.control.leftOperand === LeftOperand.Register,
-      _.allowForwarding(1) := upstream.data.control.rightOperand === RightOperand.Register,
-      _.destinationIsNonZero := upstream.data.control.destinationIsNonZero,
       _.aluFunction := Mux(upstream.data.control.aluFunIsAdd, AluFunction.Addition, AluFunction.safe(funct7(5) ## funct3)._1),
       _.memoryOperation := MemoryOperation.safe(opcode.asUInt.apply(5))._1,
       _.withSideEffects.set(
@@ -93,11 +93,11 @@ class Decode extends PipelineStage(new FetchToDecode, new DecodeToExecute) {
   )
 
   upstream.flowControl.set(
-    _.stall := downstream.flowControl.stall || io.hazard.hazard,
+    _.stall := downstream.flowControl.stall || io.hazardDetection.hazard,
     _.flush := downstream.flowControl.flush || upstream.data.control.isJalr || (upstream.data.control.guess =/= branchDecision)
   )
 
-  when(downstream.flowControl.flush || io.hazard.hazard) {
+  when(downstream.flowControl.flush || io.hazardDetection.hazard) {
     downstream.data.control.withSideEffects.set(
       _.hasMemoryAccess := 0.B,
       _.isCsrRead := 0.B,

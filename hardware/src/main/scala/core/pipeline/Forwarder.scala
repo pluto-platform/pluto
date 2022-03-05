@@ -22,9 +22,9 @@ class Forwarder extends Module {
       val memoryToDecode = Delay(source.id === io.execute.nextMemoryInfo.destination && io.execute.nextMemoryInfo.canForward, cycles = 1)
       val memoryToExecute = Delay(source.id === io.decode.nextExecuteInfo.destination && io.decode.nextExecuteInfo.canForward && !source.neededInDecode, cycles = 2)
       val writeBackToDecode = Delay(source.id === io.memory.nextWriteBackInfo.destination && io.memory.nextWriteBackInfo.canForward, cycles = 1)
-      decodeChannel.shouldForward := (delayedMemoryToDecode || memoryToDecode || writeBackToDecode) && source.acceptsForwarding
+      decodeChannel.shouldForward := (delayedMemoryToDecode || memoryToDecode || writeBackToDecode)
       decodeChannel.value := Mux(writeBackToDecode, io.writeBack.writeBackValue, io.memory.writeBackValue)
-      executeChannel.shouldForward := memoryToExecute && source.acceptsForwarding
+      executeChannel.shouldForward := memoryToExecute && source.acceptsForwardingInExecute
       executeChannel.value := io.memory.writeBackValue
   }
 

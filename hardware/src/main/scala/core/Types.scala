@@ -47,7 +47,7 @@ object Forwarding {
   class SourceBundle extends Bundle {
     val id = UInt(5.W)
     val neededInDecode = Bool()
-    val acceptsForwarding = Bool()
+    val acceptsForwardingInExecute = Bool()
   }
 
   class FetchChannel extends Bundle {

@@ -61,11 +61,11 @@ class Pipeline extends Module {
     val execute = PipelineRegister(new ExecuteToMemory).suggestName("reg_execute_memory")
     val memory = PipelineRegister(new MemoryToWriteBack).suggestName("reg_memory_writeback")
   }
-  object hello {
+  object Components {
     val pc = Module(new ProgramCounter).suggestName("pc")
     val registerFile = Module(new IntegerRegisterFile).suggestName("registerfile")
     val forwader = Module(new Forwarder).suggestName("forwarder")
-    val loadUseHazardDetector = Module(new HazardDetector).suggestName("load_use_hazard_detector")
+    val hazardDetector = Module(new HazardDetector).suggestName("hazard_detector")
     val csrFile = Module(new ControlAndStatusRegisterFile).suggestName("csrfile")
     val branchingUnit = Module(new BranchingUnit).suggestName("branching_unit")
     val branchPredictor = Module(new SimpleBranchPredictor).suggestName("branch_predictor")
@@ -82,45 +82,46 @@ class Pipeline extends Module {
     .attachStage(Stage.writeBack)
 
   Stage.writeBack.downstream.flowControl := 0.U.asTypeOf(new PipelineControl)
-  Stage.fetch.upstream.data.pc := hello.pc.io.value
+  Stage.fetch.upstream.data.pc := Components.pc.io.value
 
   io.dataChannel.set(
     _.request <> Stage.memory.io.dataRequest,
     _.response <> Stage.writeBack.io.dataResponse
   )
   io.instructionChannel.set(
-    _.request <> hello.pc.io.instructionRequest,
+    _.request <> Components.pc.io.instructionRequest,
     _.response <> Stage.fetch.io.instructionResponse
   )
 
-  hello.pc.io.set(
+  Components.pc.io.set(
     _.stall := Stage.fetch.upstream.flowControl.stall || !io.instructionChannel.request.ready
   )
-  hello.registerFile.io.set(
+  Components.registerFile.io.set(
     _.source.request <> Stage.fetch.io.registerSources,
     _.source.response <> Stage.decode.io.registerSources,
     _.write <> Stage.writeBack.io.registerFile
   )
-  hello.forwader.io.set(
+  Components.forwader.io.set(
+    _.fetch <> Stage.fetch.io.forwarding,
+    _.decode <> Stage.decode.io.forwarding,
     _.execute <> Stage.execute.io.forwarding,
     _.memory <> Stage.memory.io.forwarding,
     _.writeBack <> Stage.writeBack.io.forwarding
   )
-  hello.loadUseHazardDetector.io.set(
-    _.decode <> Stage.decode.io.loadUseHazard,
-    //_.execute <> Stage.execute.io.loadUseHazard
+  Components.hazardDetector.io.set(
+    _.fetch <> Stage.fetch.io.hazardDetection,
+    _.decode <> Stage.decode.io.hazardDetection
   )
-  hello.csrFile.io.set(
+  Components.csrFile.io.set(
     _.readRequest <> Stage.execute.io.csrRequest,
     _.readResponse <> Stage.memory.io.csrResponse,
     _.writeRequest <> Stage.writeBack.io.csrFile
   )
-  hello.branchingUnit.io.set(
+  Components.branchingUnit.io.set(
     _.fetch <> Stage.fetch.io.branching,
     _.decode <> Stage.decode.io.branching,
-    _.execute <> Stage.execute.io.branching,
-    _.pc <> hello.pc.io.branching,
-    _.predictor <> hello.branchPredictor.io
+    _.pc <> Components.pc.io.branching,
+    _.predictor <> Components.branchPredictor.io
   )
 
 }

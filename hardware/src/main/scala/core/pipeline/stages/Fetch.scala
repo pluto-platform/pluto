@@ -1,6 +1,7 @@
 package core.pipeline.stages
 
 import chisel3._
+import chisel3.util.UIntToOH
 import core.ControlTypes.{InstructionType, LeftOperand, RightOperand, WriteSourceRegister}
 import core.Pipeline.InstructionChannel
 import core.PipelineInterfaces._
@@ -20,7 +21,7 @@ class Fetch extends PipelineStage(new ToFetch, new FetchToDecode) {
     val branching = new Branching.FetchChannel
     val registerSources = Output(new IntegerRegisterFile.SourceRequest)
     val forwarding = new Forwarding.FetchChannel
-    val hazard = new Hazard.FetchChannel
+    val hazardDetection = new Hazard.FetchChannel
   })
 
 
@@ -29,6 +30,7 @@ class Fetch extends PipelineStage(new ToFetch, new FetchToDecode) {
   val (opcode, validOpcode) = Opcode.safe(instruction(6,0))
   val source = VecInit(instruction(19,15), instruction(24,20))
   val destination = instruction(11,7)
+  val funct3 = instruction(14,12)
 
   val jump = opcode === Opcode.jal
   val isJalr = opcode === Opcode.jalr
@@ -70,13 +72,13 @@ class Fetch extends PipelineStage(new ToFetch, new FetchToDecode) {
   io.forwarding.set(
     _.source(0).id := source(0),
     _.source(0).neededInDecode := isBranch || isJalr,
-    _.source(0).acceptsForwarding := !leftOperandIsNotRegister,
+    _.source(0).acceptsForwardingInExecute := !leftOperandIsNotRegister,
     _.source(1).id := source(1),
     _.source(1).neededInDecode := isBranch,
-    _.source(1).acceptsForwarding := !rightOperandIsNotRegister
+    _.source(1).acceptsForwardingInExecute := !rightOperandIsNotRegister
   )
 
-  io.hazard.set(
+  io.hazardDetection.set(
     _.source := source,
     _.isBranch := isBranch,
     _.isJalr := isJalr
@@ -89,6 +91,7 @@ class Fetch extends PipelineStage(new ToFetch, new FetchToDecode) {
     _.recoveryTarget := Mux(io.branching.guess, nextPc, target), // pass on the fallback target, to recover a wrong branch prediction
     _.instruction := instruction,
     _.validOpcode := validOpcode,
+    _.compareSelect := UIntToOH(funct3).asBools.take(6),
     _.control.set(
       _.guess := io.branching.guess,
       _.isJalr := isJalr,

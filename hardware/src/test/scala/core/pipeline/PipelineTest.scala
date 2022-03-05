@@ -2,7 +2,7 @@ package core.pipeline
 
 import chisel3._
 import chiseltest._
-import core.Pipeline
+import core.{Pipeline, Top}
 import lib.util.BundleItemAssignment
 import org.scalatest.flatspec.AnyFlatSpec
 

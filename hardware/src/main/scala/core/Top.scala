@@ -1,8 +1,7 @@
-package core.pipeline
+package core
 
 import chisel3._
 import core.ControlTypes.{MemoryAccessResult, MemoryOperation}
-import core.Pipeline
 import lib.modules.SyncROM
 import lib.util.BundleItemAssignment
 

@@ -28,17 +28,21 @@ class Memory extends PipelineStage(new ExecuteToMemory, new MemoryToWriteBack) {
     _.function := bitMaskerFunction
   )
 
+  val memNotReady = !io.dataRequest.ready && upstream.data.control.withSideEffects.hasMemoryAccess
+
   upstream.flowControl.set(
     _.flush := downstream.flowControl.flush,
-    _.stall := downstream.flowControl.stall || (!io.dataRequest.ready && upstream.data.control.withSideEffects.hasMemoryAccess)
+    _.stall := downstream.flowControl.stall || memNotReady
   )
 
-  /*
+
   io.forwarding.set(
-    _.destination := upstream.data.destination,
-    _.writeBackValue := upstream.data.aluResult,
-    _.destinationIsNonZero := upstream.data.control.destinationIsNonZero
-  )*/
+    _.nextWriteBackInfo.set(
+      _.destination := upstream.data.destination,
+      _.canForward := upstream.data.control.withSideEffects.hasRegisterWriteBack
+    ),
+    _.writeBackValue := upstream.data.aluResult
+  )
 
   io.dataRequest.set(
     _.valid := upstream.data.control.withSideEffects.hasMemoryAccess,
@@ -57,8 +61,7 @@ class Memory extends PipelineStage(new ExecuteToMemory, new MemoryToWriteBack) {
     _.registerWriteBack.value := Mux(upstream.data.control.withSideEffects.isCsrWrite, io.csrResponse.value, upstream.data.aluResult),
     _.registerWriteBack.index := upstream.data.destination,
     _.control.set(
-      _.isLoad := upstream.data.control.isLoad,
-      _.destinationIsNonZero := upstream.data.control.destinationIsNonZero,
+      _.isLoad := upstream.data.control.memoryOperation === MemoryOperation.Read && upstream.data.control.withSideEffects.hasMemoryAccess,
       _.withSideEffects.set(
         _.writeCsrFile := upstream.data.control.withSideEffects.isCsrWrite,
         _.writeRegisterFile := upstream.data.control.withSideEffects.hasRegisterWriteBack
@@ -66,7 +69,7 @@ class Memory extends PipelineStage(new ExecuteToMemory, new MemoryToWriteBack) {
     )
   )
 
-  when(!io.dataRequest.ready && upstream.data.control.withSideEffects.hasMemoryAccess) {
+  when(memNotReady) {
     downstream.data.control.withSideEffects.set(
       _.writeCsrFile := 0.B,
       _.writeRegisterFile := 0.B
