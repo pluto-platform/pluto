@@ -2,7 +2,7 @@ package core.pipeline
 
 import chisel3._
 import core.Forwarding
-import lib.util.{BoolVec,  Delay}
+import lib.util.Delay
 
 class Forwarder extends Module {
 
@@ -15,32 +15,17 @@ class Forwarder extends Module {
   })
 
 
-  // collect destination and source matches
-  object Match {
-    val Seq(decode,execute,memory) =
-      Seq(io.decode.nextExecuteInfo, io.execute.nextMemoryInfo, io.memory.nextWriteBackInfo)
-        .map { info => io.fetch.source.map(_ === info.destination && info.canForward) }
+  (io.fetch.source,io.decode.channel,io.execute.channel)
+    .zipped.toList
+    .foreach { case (source, decodeChannel, executeChannel) =>
+      val delayedMemoryToDecode = Delay(source.id === io.decode.nextExecuteInfo.destination && io.decode.nextExecuteInfo.canForward && source.neededInDecode, cycles = 2)
+      val memoryToDecode = Delay(source.id === io.execute.nextMemoryInfo.destination && io.execute.nextMemoryInfo.canForward, cycles = 1)
+      val memoryToExecute = Delay(source.id === io.decode.nextExecuteInfo.destination && io.decode.nextExecuteInfo.canForward && !source.neededInDecode, cycles = 2)
+      val writeBackToDecode = Delay(source.id === io.memory.nextWriteBackInfo.destination && io.memory.nextWriteBackInfo.canForward, cycles = 1)
+      decodeChannel.shouldForward := (delayedMemoryToDecode || memoryToDecode || writeBackToDecode) && source.acceptsForwarding
+      decodeChannel.value := Mux(writeBackToDecode, io.writeBack.writeBackValue, io.memory.writeBackValue)
+      executeChannel.shouldForward := memoryToExecute && source.acceptsForwarding
+      executeChannel.value := io.memory.writeBackValue
   }
-
-
-  io.decode.shouldForward(0) :=
-    Delay(Match.decode(0) && io.fetch.needsValuesInDecode, cycles = 2) ||
-      Delay(Match.execute(0) || Match.memory(0), cycles = 1)
-  io.decode.shouldForward(1) :=
-    Delay(Match.decode(1) && io.fetch.needsValuesInDecode, cycles = 2) ||
-      Delay(Match.execute(1) || Match.memory(1), cycles = 1)
-
-  io.decode.forwardedValue := Mux(
-    Delay(Match.memory.orR, cycles = 1),
-    io.writeBack.writeBackValue,
-    io.memory.writeBackValue
-  )
-
-  io.execute.shouldForward(0) :=
-    Delay(Match.decode(0) && !io.fetch.needsValuesInDecode, cycles = 2)
-  io.execute.shouldForward(1) :=
-    Delay(Match.decode(1) && !io.fetch.needsValuesInDecode, cycles = 2)
-
-  io.execute.forwardedValue := io.memory.writeBackValue
 
 }

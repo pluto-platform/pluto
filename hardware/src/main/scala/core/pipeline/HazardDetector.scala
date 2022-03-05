@@ -11,11 +11,12 @@ class HazardDetector extends Module {
     val decode = Flipped(new Hazard.DecodeChannel)
   })
 
-  val sourceMatch = io.fetch.source.map(_ === io.decode.destination).orR
+  val sourceMatch = io.fetch.source.map(_ === io.decode.destination)
 
-  val loadUseHazard = sourceMatch && io.decode.isLoad
-  val branchJumpHazard = sourceMatch && io.fetch.isBranchOrJalr
+  val loadUseHazard = sourceMatch.orR && io.decode.isLoad
+  val branchDataHazard = sourceMatch.orR && io.fetch.isBranch
+  val jumpDataHazard = sourceMatch(0) && io.fetch.isJalr
 
-  io.decode.hazard := Delay(io.decode.canForward && (loadUseHazard || branchJumpHazard), cycles = 1)
+  io.decode.hazard := Delay(io.decode.canForward && (loadUseHazard || branchDataHazard || jumpDataHazard), cycles = 1)
 
 }

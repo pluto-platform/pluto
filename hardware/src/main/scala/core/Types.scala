@@ -15,13 +15,11 @@ object Branching {
   }
   class DecodeChannel extends Bundle {
     val jump = Output(Bool())
-    val target = Output(UInt(32.W))
-  }
-  class ExecuteChannel extends Bundle {
-    val decision = Output(Bool())
-    val recoveryTarget = Output(UInt(32.W))
-    val pc = Output(UInt(32.W))
+    val branch = Output(Bool())
     val guess = Output(Bool())
+    val decision = Output(Bool())
+    val target = Output(UInt(32.W))
+    val pc = Output(UInt(32.W))
   }
   class ProgramCounterChannel extends Bundle {
     val next = Input(UInt(32.W))
@@ -43,24 +41,27 @@ object Forwarding {
     val canForward = Bool()
   }
   class ForwardingChannel extends Bundle {
-
+    val shouldForward = Bool()
+    val value = UInt(32.W)
+  }
+  class SourceBundle extends Bundle {
+    val id = UInt(5.W)
+    val neededInDecode = Bool()
+    val acceptsForwarding = Bool()
   }
 
   class FetchChannel extends Bundle {
-    val source = Output(Vec(2, UInt(5.W)))
-    val needsValuesInDecode = Output(Bool())
+    val source = Output(Vec(2, new SourceBundle))
   }
   class DecodeChannel extends Bundle {
     val nextExecuteInfo = Output(new InfoProvider)
 
-    val shouldForward = Input(Vec(2, Bool()))
-    val forwardedValue = Input(UInt(32.W))
+    val channel = Input(Vec(2, new ForwardingChannel))
   }
   class ExecuteChannel extends Bundle {
     val nextMemoryInfo = Output(new InfoProvider)
 
-    val shouldForward = Input(Vec(2, Bool()))
-    val forwardedValue = Input(UInt(32.W))
+    val channel = Input(Vec(2, new ForwardingChannel))
   }
   class MemoryChannel extends Bundle {
     val nextWriteBackInfo = Output(new InfoProvider)
@@ -74,7 +75,8 @@ object Forwarding {
 object Hazard {
   class FetchChannel extends Bundle {
     val source = Output(Vec(2, UInt(5.W)))
-    val isBranchOrJalr = Output(Bool())
+    val isBranch = Output(Bool())
+    val isJalr = Output(Bool())
   }
   class DecodeChannel extends Bundle {
     val destination = Output(UInt(5.W))

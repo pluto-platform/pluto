@@ -36,18 +36,7 @@ class Execute extends PipelineStage(new DecodeToExecute, new ExecuteToMemory) {
     _.operation := upstream.data.control.aluFunction
   )
 
-  val comparisons = VecInit(
-    op(0) === op(1),
-    op(0) =/= op(1),
-    op(0).asSInt < op(1).asSInt,
-    op(0).asSInt >= op(1).asSInt,
-    op(0) < op(1),
-    op(0) >= op(1)
-  )
 
-  //io.forwarding.source := upstream.data.source
-
-  val branch = upstream.data.control.isBranch && comparisons(upstream.data.funct3)
   io.branching.set(
     _.pc := upstream.data.pc,
     _.recoveryTarget := upstream.data.recoveryTarget,

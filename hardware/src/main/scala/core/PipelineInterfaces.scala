@@ -28,6 +28,10 @@ object PipelineInterfaces {
       val guess = Bool()
       val isJalr = Bool()
       val isBranch = Bool()
+      val isLoad = Bool()
+      val isStore = Bool()
+      val isImmediate = Bool()
+      val isSystem = Bool()
       val aluFunIsAdd = Bool()
       val isNotRegisterRegister = Bool()
       val add4 = Bool()
@@ -54,7 +58,6 @@ object PipelineInterfaces {
     val recoveryTarget = UInt(32.W)
 
     val control = new Bundle {
-      val isLoad = Bool()
       val isBranch = Bool()
       val guess = Bool()
       val allowForwarding = Vec(2,Bool())

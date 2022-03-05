@@ -3,7 +3,7 @@ package core.pipeline.stages
 import chisel3._
 import core.ControlTypes.{AluFunction, BitMaskerFunction, InstructionType, LeftOperand, MemoryAccessWidth, MemoryOperation, RightOperand, WriteBackSource, WriteSourceRegister}
 import core.PipelineInterfaces.{DecodeToExecute, FetchToDecode}
-import core.{Branching, Hazard, PipelineStage}
+import core.{Branching, Forwarding, Hazard, PipelineStage}
 import core.pipeline.IntegerRegisterFile
 import lib.Immediates.FromInstructionToImmediate
 import lib.LookUp._
@@ -15,7 +15,8 @@ class Decode extends PipelineStage(new FetchToDecode, new DecodeToExecute) {
   val io = IO(new Bundle {
     val registerSources = Input(new IntegerRegisterFile.SourceResponse)
     val branching = new Branching.DecodeChannel
-    val loadUseHazard = new Hazard.DecodeChannel
+    val hazard = new Hazard.DecodeChannel
+    val forwarding = new Forwarding.DecodeChannel
   })
 
   val immediate = lookUp(upstream.data.control.instructionType) in (
@@ -29,16 +30,40 @@ class Decode extends PipelineStage(new FetchToDecode, new DecodeToExecute) {
   val (opcode,_) = Opcode.safe(upstream.data.instruction(6,0))
 
 
-  val isLoad = opcode === Opcode.load
-  val isStore = opcode === Opcode.store
-  val isCsrAccess = opcode === Opcode.system && funct3 =/= 0.U
+  val operand = io.registerSources.data.zip(io.forwarding.channel).map { case (reg, channel) => Mux(channel.shouldForward, channel.value, reg)}
+
+  val isCsrAccess = upstream.data.control.isSystem && funct3 =/= 0.U
+
+  val comparisons = VecInit(
+    operand(0) === operand(1),
+    operand(0) =/= operand(1),
+    operand(0).asSInt < operand(1).asSInt,
+    operand(0).asSInt >= operand(1).asSInt,
+    operand(0) < operand(1),
+    operand(0) >= operand(1)
+  )
+
+  val branchDecision = upstream.data.control.isBranch && comparisons(funct3)
 
   io.branching.set(
     _.jump := upstream.data.control.isJalr,
-    _.target := (io.registerSources.data(0).asSInt + upstream.data.instruction.extractImmediate.iType).asUInt
+    _.branch := upstream.data.control.isBranch,
+    _.guess := upstream.data.control.guess,
+    _.decision := branchDecision,
+    _.target := Mux(upstream.data.control.isBranch, upstream.data.recoveryTarget, (operand(0).asSInt + upstream.data.instruction.extractImmediate.iType).asUInt),
+    _.pc := upstream.data.pc
   )
 
-  //io.loadUseHazard.source := upstream.data.source
+  io.forwarding.nextExecuteInfo.set(
+    _.canForward := upstream.data.control.hasRegisterWriteBack,
+    _.destination := upstream.data.destination
+  )
+
+  io.hazard.set(
+    _.destination := upstream.data.destination,
+    _.canForward := upstream.data.control.hasRegisterWriteBack,
+    _.isLoad := upstream.data.control.isLoad
+  )
 
   downstream.data.set(
     _.pc := upstream.data.pc,
@@ -57,23 +82,22 @@ class Decode extends PipelineStage(new FetchToDecode, new DecodeToExecute) {
       _.allowForwarding(1) := upstream.data.control.rightOperand === RightOperand.Register,
       _.destinationIsNonZero := upstream.data.control.destinationIsNonZero,
       _.aluFunction := Mux(upstream.data.control.aluFunIsAdd, AluFunction.Addition, AluFunction.safe(funct7(5) ## funct3)._1),
-      _.isLoad := isLoad,
       _.memoryOperation := MemoryOperation.safe(opcode.asUInt.apply(5))._1,
       _.withSideEffects.set(
-        _.hasMemoryAccess := isLoad || isStore,
+        _.hasMemoryAccess := upstream.data.control.isLoad || upstream.data.control.isStore,
         _.isCsrWrite := isCsrAccess,
         _.isCsrRead := isCsrAccess && upstream.data.control.destinationIsNonZero,
-        _.hasRegisterWriteBack := !opcode.isOneOf(Opcode.store, Opcode.branch) && opcode.asUInt =/= 0.U && upstream.data.control.destinationIsNonZero // TODO: move to fetch
+        _.hasRegisterWriteBack := upstream.data.control.hasRegisterWriteBack
       )
     )
   )
 
   upstream.flowControl.set(
-    _.stall := downstream.flowControl.stall || io.loadUseHazard.hazard,
-    _.flush := downstream.flowControl.flush || upstream.data.control.isJalr
+    _.stall := downstream.flowControl.stall || io.hazard.hazard,
+    _.flush := downstream.flowControl.flush || upstream.data.control.isJalr || (upstream.data.control.guess =/= branchDecision)
   )
 
-  when(downstream.flowControl.flush || io.loadUseHazard.hazard) {
+  when(downstream.flowControl.flush || io.hazard.hazard) {
     downstream.data.control.withSideEffects.set(
       _.hasMemoryAccess := 0.B,
       _.isCsrRead := 0.B,
