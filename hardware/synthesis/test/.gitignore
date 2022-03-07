@@ -1,4 +1,3 @@
 /*
 !/Makefile
-!/Ferrum.sdc
-!/Ferrum.qsf
+!/pinout.tcl
