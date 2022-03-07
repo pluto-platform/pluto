@@ -1,8 +1,8 @@
 package core.pipeline
 
 import chisel3._
-import chisel3.stage.ChiselStage
-import chisel3.util.{Valid, ValidIO}
+import chisel3.util.Valid
+import core.pipeline.IntegerRegisterFile.SimulationSetup
 
 object IntegerRegisterFile {
 
@@ -18,9 +18,17 @@ object IntegerRegisterFile {
     val data = UInt(32.W)
   }
 
+  case class SimulationSetup(init: Seq[UInt])
+
+  class SimulationSignals extends Bundle {
+    val registers = Output(Vec(32, UInt(32.W)))
+  }
+
 }
 
-class IntegerRegisterFile extends Module {
+class IntegerRegisterFile(init: Option[Seq[BigInt]] = None) extends Module {
+
+  if(init.isDefined) require(init.get.length == 32)
 
   val io = IO(new Bundle {
 
@@ -31,20 +39,36 @@ class IntegerRegisterFile extends Module {
     val write = Flipped(Valid(new IntegerRegisterFile.WriteRequest))
 
   })
+  val simulation = if(init.isDefined) Some(IO(new IntegerRegisterFile.SimulationSignals)) else None
 
-  val memory = SyncReadMem(32, UInt(32.W))
+  init match {
+    case Some(init) =>
 
-  //val writeIsNotX0 = io.write.bits.index.orR
-  //val writeAllowed = writeIsNotX0 && io.write.valid
+      val memory = RegInit(VecInit(init.map(_.U(32.W))))
 
-  // handle both read requests
-  io.source.request.index.zip(io.source.response.data).foreach { case (address, data) =>
-    data := memory.read(address)
-  }
+      io.source.request.index.zip(io.source.response.data).foreach { case (address, data) =>
+        data := memory(RegNext(address))
+      }
+      when(io.write.valid) {
+        memory(io.write.bits.index) := io.write.bits.data
+      }
 
-  // handle write request
-  when(io.write.valid) {
-    memory.write(io.write.bits.index, io.write.bits.data)
+      simulation.get.registers := memory
+
+    case None =>
+
+      val memory = SyncReadMem(32, UInt(32.W))
+
+      // handle both read requests
+      io.source.request.index.zip(io.source.response.data).foreach { case (address, data) =>
+        data := memory.read(address)
+      }
+
+      // handle write request
+      when(io.write.valid) {
+        memory.write(io.write.bits.index, io.write.bits.data)
+      }
+
   }
 
 }

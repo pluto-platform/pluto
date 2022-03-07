@@ -24,5 +24,13 @@ object util {
   implicit class SeqToTransposable[T](x: Seq[Seq[T]]) {
     def T: Seq[Seq[T]] = Seq.tabulate(x.head.length)(i => x.map(_(i)))
   }
+  implicit class FieldOptionExtractor[T](top: Option[T]) {
+    def getFieldOption[U](field: T => U): Option[U] = {
+      if(top.isDefined) Some(field(top.get)) else None
+    }
+  }
+  implicit def ConcreteValueToOption[T](v: T): Option[T] = Some(v)
+  implicit def IntToBigInt(x: Int): BigInt = BigInt(x)
+  implicit def IntSeqToBigIntSeq(x: Seq[Int]): Seq[BigInt] = x.map(BigInt(_))
 }
 

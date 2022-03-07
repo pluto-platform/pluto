@@ -3,10 +3,11 @@ import chisel3._
 import chisel3.util.{DecoupledIO, ValidIO}
 import core.ControlTypes.{MemoryAccessResult, MemoryAccessWidth, MemoryOperation}
 import core.PipelineInterfaces.{DecodeToExecute, ExecuteToMemory, FetchToDecode, MemoryToWriteBack}
-import core.pipeline.{BranchingUnit, ControlAndStatusRegisterFile, Forwarder, IntegerRegisterFile, HazardDetector, ProgramCounter, SimpleBranchPredictor}
+import core.pipeline.{BranchingUnit, ControlAndStatusRegisterFile, Forwarder, HazardDetector, IntegerRegisterFile, ProgramCounter, SimpleBranchPredictor}
 import core.pipeline.stages.{Decode, Execute, Fetch, Memory, WriteBack}
 import lib.Interfaces.Channel
-import lib.util.BundleItemAssignment
+import lib.SimulationState
+import lib.util.{BundleItemAssignment, FieldOptionExtractor}
 
 
 object Pipeline {
@@ -14,6 +15,10 @@ object Pipeline {
   class PipelineIO extends Bundle {
     val instructionChannel = new InstructionChannel
     val dataChannel = new DataChannel
+  }
+  class PipelineSimulationIO extends Bundle {
+    val pc = UInt(32.W)
+    val registerFile = Vec(32, UInt(32.W))
   }
 
 
@@ -42,33 +47,60 @@ object Pipeline {
   }
   class DataChannel extends Channel(new DataChannel.Request, new DataChannel.Response)
 
+
+  case class State(
+                  pc: BigInt,
+                  registerFile: Seq[BigInt]
+                  )
+
+
+
 }
 
-class Pipeline extends Module {
+
+class Pipeline(sim: Option[Pipeline.State] = None) extends Module {
 
   val io = IO(new Pipeline.PipelineIO)
+  val simulation = if(sim.isDefined) Some(IO(Output(new Pipeline.PipelineSimulationIO))) else None
+
 
   object Stage {
-    val fetch = Module(new Fetch).suggestName("stage_fetch")
-    val decode = Module(new Decode).suggestName("stage_decode")
-    val execute = Module(new Execute).suggestName("stage_execute")
-    val memory = Module(new Memory).suggestName("stage_memory")
-    val writeBack = Module(new WriteBack).suggestName("stage_writeback")
+    val fetch = Module(new Fetch)
+      .suggestName("stage_fetch")
+    val decode = Module(new Decode)
+      .suggestName("stage_decode")
+    val execute = Module(new Execute)
+      .suggestName("stage_execute")
+    val memory = Module(new Memory)
+      .suggestName("stage_memory")
+    val writeBack = Module(new WriteBack)
+      .suggestName("stage_writeback")
   }
   object StageReg {
-    val fetch = PipelineRegister(new FetchToDecode).suggestName("reg_fetch_decode")
-    val decode = PipelineRegister(new DecodeToExecute).suggestName("reg_decode_execute")
-    val execute = PipelineRegister(new ExecuteToMemory).suggestName("reg_execute_memory")
-    val memory = PipelineRegister(new MemoryToWriteBack).suggestName("reg_memory_writeback")
+    val fetch = PipelineRegister(new FetchToDecode)
+      .suggestName("reg_fetch_decode")
+    val decode = PipelineRegister(new DecodeToExecute)
+      .suggestName("reg_decode_execute")
+    val execute = PipelineRegister(new ExecuteToMemory)
+      .suggestName("reg_execute_memory")
+    val memory = PipelineRegister(new MemoryToWriteBack)
+      .suggestName("reg_memory_writeback")
   }
   object Components {
-    val pc = Module(new ProgramCounter).suggestName("pc")
-    val registerFile = Module(new IntegerRegisterFile).suggestName("registerfile")
-    val forwader = Module(new Forwarder).suggestName("forwarder")
-    val hazardDetector = Module(new HazardDetector).suggestName("hazard_detector")
-    val csrFile = Module(new ControlAndStatusRegisterFile).suggestName("csrfile")
-    val branchingUnit = Module(new BranchingUnit).suggestName("branching_unit")
-    val branchPredictor = Module(new SimpleBranchPredictor).suggestName("branch_predictor")
+    val pc = Module(new ProgramCounter(sim.getFieldOption(_.pc)))
+      .suggestName("pc")
+    val registerFile = Module(new IntegerRegisterFile(sim.getFieldOption(_.registerFile)))
+      .suggestName("registerfile")
+    val forwader = Module(new Forwarder)
+      .suggestName("forwarder")
+    val hazardDetector = Module(new HazardDetector)
+      .suggestName("hazard_detector")
+    val csrFile = Module(new ControlAndStatusRegisterFile)
+      .suggestName("csrfile")
+    val branchingUnit = Module(new BranchingUnit)
+      .suggestName("branching_unit")
+    val branchPredictor = Module(new SimpleBranchPredictor)
+      .suggestName("branch_predictor")
   }
 
   Stage.fetch
@@ -123,6 +155,12 @@ class Pipeline extends Module {
     _.pc <> Components.pc.io.branching,
     _.predictor <> Components.branchPredictor.io
   )
+
+  if(sim.isDefined) {
+    simulation.get.pc := Components.pc.io.value
+    simulation.get.registerFile := Components.registerFile.simulation.get.registers
+  }
+
 
 }
 

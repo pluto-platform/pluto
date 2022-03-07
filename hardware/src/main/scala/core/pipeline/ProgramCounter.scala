@@ -5,7 +5,11 @@ import core.Branching
 import core.Pipeline.InstructionChannel
 import lib.util.BundleItemAssignment
 
-class ProgramCounter extends Module{
+object ProgramCounter {
+
+}
+
+class ProgramCounter(init: Option[BigInt] = None) extends Module{
 
   val io = IO(new Bundle {
     val instructionRequest = new InstructionChannel.Request
@@ -14,7 +18,7 @@ class ProgramCounter extends Module{
     val branching = new Branching.ProgramCounterChannel
   })
 
-  val reg = RegInit(0.U(32.W))
+  val reg = RegInit(init.getOrElse(BigInt(0)).U(32.W))
 
   val nextReg = Mux(io.stall, reg, io.branching.next)
   reg := nextReg

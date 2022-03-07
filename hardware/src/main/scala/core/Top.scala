@@ -5,25 +5,20 @@ import core.ControlTypes.{MemoryAccessResult, MemoryOperation}
 import lib.modules.SyncROM
 import lib.util.BundleItemAssignment
 
+import java.nio.file.{Files, Paths}
+
 class Top extends Module {
   val io = IO(new Bundle {
     val led = Output(Bool())
   })
   val pipeline = Module(new Pipeline)
 
-  val simpleBlink = Seq(
-    0x100000b7L,
-    0x00008093L,
-    0x009891b7L,
-    0x68018193L,
-    0x00000213L,
-    0x00000113L,
-    0x00110113L,
-    0xfe314ee3L,
-    0x0040a023L,
-    0xfff24213L,
-    0xfedff06fL,
-  )
+  val simpleBlink = Files.readAllBytes(Paths.get("asm/blinkTest.bin"))
+    .map(_.toLong & 0xFF)
+    .grouped(4)
+    .map(a => a(0) | (a(1) << 8) | (a(2) << 16) | (a(3) << 24))
+    .toArray
+
   val advancedBlink = Seq(
     0x100002b7L,
     0x00028293L,
@@ -73,5 +68,5 @@ class Top extends Module {
 }
 
 object TopEmitter extends App {
-  emitVerilog(new Top)
+  emitVerilog(new Top, Array("--target-dir","build"))
 }

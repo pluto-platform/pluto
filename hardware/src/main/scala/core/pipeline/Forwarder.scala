@@ -14,6 +14,15 @@ class Forwarder extends Module {
     val writeBack = Flipped(new Forwarding.WriteBackChannel)
   })
 
+/*
+need to know whether stall occurs and set forwarding source accordingly
+
+- instruction ahead of branch changes either source register -> stall in decode -> forward from memory to decode
+- instruction ahead of jalr changes s0 -> stall in decode -> forward from memory to decode
+- instruction ahead is a load to either source register -> stall in decode -> forward from writeBack to execute
+- instruction ahead changes either source register -> forward from memory to execute
+- instruction two ahead changes either source register -> forward from memory to decode -> unless stall due to other channel -> forward from wb to dec
+ */
 
   (io.fetch.source,io.decode.channel,io.execute.channel)
     .zipped.toList
@@ -23,7 +32,7 @@ class Forwarder extends Module {
       val memoryToExecute = Delay(source.id === io.decode.nextExecuteInfo.destination && io.decode.nextExecuteInfo.canForward && !source.neededInDecode, cycles = 2)
       val writeBackToDecode = Delay(source.id === io.memory.nextWriteBackInfo.destination && io.memory.nextWriteBackInfo.canForward, cycles = 1)
       decodeChannel.shouldForward := (delayedMemoryToDecode || memoryToDecode || writeBackToDecode)
-      decodeChannel.value := Mux(writeBackToDecode, io.writeBack.writeBackValue, io.memory.writeBackValue)
+      decodeChannel.value := Mux(delayedMemoryToDecode || memoryToDecode, io.memory.writeBackValue, io.writeBack.writeBackValue)
       executeChannel.shouldForward := memoryToExecute && source.acceptsForwardingInExecute
       executeChannel.value := io.memory.writeBackValue
   }
