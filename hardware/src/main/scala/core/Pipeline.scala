@@ -134,15 +134,15 @@ class Pipeline(sim: Option[Pipeline.State] = None) extends Module {
     _.write <> Stage.writeBack.io.registerFile
   )
   Components.forwader.io.set(
-    _.fetch <> Stage.fetch.io.forwarding,
     _.decode <> Stage.decode.io.forwarding,
     _.execute <> Stage.execute.io.forwarding,
     _.memory <> Stage.memory.io.forwarding,
     _.writeBack <> Stage.writeBack.io.forwarding
   )
   Components.hazardDetector.io.set(
-    _.fetch <> Stage.fetch.io.hazardDetection,
-    _.decode <> Stage.decode.io.hazardDetection
+    _.decode <> Stage.decode.io.hazardDetection,
+    _.execute <> Stage.execute.io.hazardDetection,
+    _.memory <> Stage.memory.io.hazardDetection
   )
   Components.csrFile.io.set(
     _.readRequest <> Stage.execute.io.csrRequest,

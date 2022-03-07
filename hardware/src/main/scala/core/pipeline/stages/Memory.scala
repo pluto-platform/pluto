@@ -5,7 +5,7 @@ import core.ControlTypes.{BitMaskerFunction, MemoryAccessWidth, MemoryOperation}
 import core.Pipeline.DataChannel
 import core.PipelineInterfaces.{ExecuteToMemory, MemoryToWriteBack}
 import core.pipeline.{BitMasker, ControlAndStatusRegisterFile}
-import core.{Forwarding, PipelineStage}
+import core.{Forwarding, Hazard, PipelineStage}
 import lib.util.BundleItemAssignment
 
 class Memory extends PipelineStage(new ExecuteToMemory, new MemoryToWriteBack) {
@@ -15,6 +15,7 @@ class Memory extends PipelineStage(new ExecuteToMemory, new MemoryToWriteBack) {
     val forwarding = new Forwarding.MemoryChannel
     val dataRequest = new DataChannel.Request
     val csrResponse = Input(new ControlAndStatusRegisterFile.ReadResponse)
+    val hazardDetection = new Hazard.MemoryChannel
 
   })
 
@@ -35,13 +36,16 @@ class Memory extends PipelineStage(new ExecuteToMemory, new MemoryToWriteBack) {
     _.stall := downstream.flowControl.stall || memNotReady
   )
 
+  io.hazardDetection.set(
+    _.destination := upstream.data.destination,
+    _.isLoad := upstream.data.control.isLoad,
+    _.canForward := upstream.data.control.withSideEffects.hasRegisterWriteBack
+  )
 
   io.forwarding.set(
-    _.nextWriteBackInfo.set(
-      _.destination := upstream.data.destination,
-      _.canForward := upstream.data.control.withSideEffects.hasRegisterWriteBack
-    ),
-    _.writeBackValue := upstream.data.aluResult
+    _.destination := upstream.data.destination,
+    _.canForward := upstream.data.control.withSideEffects.hasRegisterWriteBack,
+    _.value := upstream.data.aluResult
   )
 
   io.dataRequest.set(
@@ -61,7 +65,7 @@ class Memory extends PipelineStage(new ExecuteToMemory, new MemoryToWriteBack) {
     _.registerWriteBack.value := Mux(upstream.data.control.withSideEffects.isCsrWrite, io.csrResponse.value, upstream.data.aluResult),
     _.registerWriteBack.index := upstream.data.destination,
     _.control.set(
-      _.isLoad := upstream.data.control.memoryOperation === MemoryOperation.Read && upstream.data.control.withSideEffects.hasMemoryAccess,
+      _.isLoad := upstream.data.control.isLoad,
       _.withSideEffects.set(
         _.writeCsrFile := upstream.data.control.withSideEffects.isCsrWrite,
         _.writeRegisterFile := upstream.data.control.withSideEffects.hasRegisterWriteBack

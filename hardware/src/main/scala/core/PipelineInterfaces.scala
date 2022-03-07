@@ -16,8 +16,6 @@ object PipelineInterfaces {
 
   class FetchToDecode extends Bundle {
     val pc = UInt(32.W)
-    val source = Vec(2, UInt(5.W))
-    val destination = UInt(5.W)
 
     val instruction = UInt(32.W)
     val validOpcode = Bool()
@@ -60,8 +58,9 @@ object PipelineInterfaces {
     val recoveryTarget = UInt(32.W)
 
     val control = new Bundle {
-      val isBranch = Bool()
-      val guess = Bool()
+      val isLoad = Bool()
+
+      val acceptsForwarding = Vec(2, Bool())
 
       val aluFunction = AluFunction()
 
@@ -86,6 +85,7 @@ object PipelineInterfaces {
     val funct3 = UInt(3.W)
 
     val control = new Bundle {
+      val isLoad = Bool()
       val memoryOperation = MemoryOperation()
       val withSideEffects = new Bundle {
         val hasMemoryAccess = Bool()

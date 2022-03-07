@@ -16,9 +16,16 @@ class Execute extends PipelineStage(new DecodeToExecute, new ExecuteToMemory) {
   val io = IO(new Bundle {
     val forwarding = new Forwarding.ExecuteChannel
     val csrRequest = Valid(new ControlAndStatusRegisterFile.ReadRequest)
+    val hazardDetection = new Hazard.ExecuteChannel
+
   })
 
-  val operand = upstream.data.operand.zip(io.forwarding.channel).map { case (reg, channel) => Mux(channel.shouldForward, channel.value, reg)}
+  (io.forwarding.channel, upstream.data.source)
+    .zipped
+    .foreach { case (channel, source) => channel.source := source}
+  val operand = (upstream.data.operand, io.forwarding.channel, upstream.data.control.acceptsForwarding)
+    .zipped
+    .map { case (reg, channel, accepts) => Mux(channel.shouldForward && accepts, channel.value, reg)}
 
   val alu = Module(new ALU)
   alu.io.set(
@@ -26,14 +33,15 @@ class Execute extends PipelineStage(new DecodeToExecute, new ExecuteToMemory) {
     _.operation := upstream.data.control.aluFunction
   )
 
-  io.forwarding.nextMemoryInfo.set(
-    _.destination := upstream.data.destination,
-    _.canForward := upstream.data.control.withSideEffects.hasRegisterWriteBack
-  )
-
   io.csrRequest.set(
     _.valid := upstream.data.control.withSideEffects.isCsrRead,
     _.bits.index := upstream.data.csrIndex
+  )
+
+  io.hazardDetection.set(
+    _.isLoad := upstream.data.control.isLoad,
+    _.destination := upstream.data.destination,
+    _.canForward := upstream.data.control.withSideEffects.hasRegisterWriteBack
   )
 
   downstream.data.set(
@@ -44,6 +52,7 @@ class Execute extends PipelineStage(new DecodeToExecute, new ExecuteToMemory) {
     _.csrIndex := upstream.data.csrIndex,
     _.funct3 := upstream.data.funct3,
     _.control.set(
+      _.isLoad := upstream.data.control.isLoad,
       _.memoryOperation := upstream.data.control.memoryOperation,
       _.withSideEffects.set(
         _.hasMemoryAccess := upstream.data.control.withSideEffects.hasMemoryAccess,

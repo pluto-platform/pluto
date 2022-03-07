@@ -20,8 +20,6 @@ class Fetch extends PipelineStage(new ToFetch, new FetchToDecode) {
     val instructionResponse = Flipped(new InstructionChannel.Response)
     val branching = new Branching.FetchChannel
     val registerSources = Output(new IntegerRegisterFile.SourceRequest)
-    val forwarding = new Forwarding.FetchChannel
-    val hazardDetection = new Hazard.FetchChannel
   })
 
 
@@ -69,25 +67,8 @@ class Fetch extends PipelineStage(new ToFetch, new FetchToDecode) {
     _.nextPc := nextPc
   )
 
-  io.forwarding.set(
-    _.source(0).id := source(0),
-    _.source(0).neededInDecode := isBranch || isJalr,
-    _.source(0).acceptsForwardingInExecute := !leftOperandIsNotRegister,
-    _.source(1).id := source(1),
-    _.source(1).neededInDecode := isBranch,
-    _.source(1).acceptsForwardingInExecute := !rightOperandIsNotRegister
-  )
-
-  io.hazardDetection.set(
-    _.source := source,
-    _.isBranch := isBranch,
-    _.isJalr := isJalr
-  )
-
   downstream.data.set(
     _.pc := upstream.data.pc,
-    _.source := source,
-    _.destination := destination,
     _.recoveryTarget := Mux(io.branching.guess, nextPc, target), // pass on the fallback target, to recover a wrong branch prediction
     _.instruction := instruction,
     _.validOpcode := validOpcode,

@@ -34,8 +34,31 @@ object Branching {
     val guess = Output(Bool())
   }
 }
-
 object Forwarding {
+  class ForwardingChannel extends Bundle {
+    val source = Output(UInt(5.W))
+    val shouldForward = Input(Bool())
+    val value = Input(UInt(32.W))
+  }
+
+  class DecodeChannel extends Bundle {
+    val channel = Vec(2, new ForwardingChannel)
+  }
+  class ExecuteChannel extends Bundle {
+    val channel = Vec(2, new ForwardingChannel)
+  }
+  class MemoryChannel extends Bundle {
+    val destination = Output(UInt(5.W))
+    val canForward = Output(Bool())
+    val value = Output(UInt(32.W))
+  }
+  class WriteBackChannel extends Bundle {
+    val destination = Output(UInt(5.W))
+    val canForward = Output(Bool())
+    val value = Output(UInt(32.W))
+  }
+}
+object OldForwarding {
   class InfoProvider extends Bundle {
     val destination = UInt(5.W)
     val canForward = Bool()
@@ -73,16 +96,21 @@ object Forwarding {
 }
 
 object Hazard {
-  class FetchChannel extends Bundle {
+  class DecodeChannel extends Bundle {
     val source = Output(Vec(2, UInt(5.W)))
     val isBranch = Output(Bool())
     val isJalr = Output(Bool())
+
+    val hazard = Input(Bool())
   }
-  class DecodeChannel extends Bundle {
+  class ExecuteChannel extends Bundle {
     val destination = Output(UInt(5.W))
     val isLoad = Output(Bool())
     val canForward = Output(Bool())
-
-    val hazard = Input(Bool())
+  }
+  class MemoryChannel extends Bundle {
+    val destination = Output(UInt(5.W))
+    val isLoad = Output(Bool())
+    val canForward = Output(Bool())
   }
 }

@@ -25,11 +25,14 @@ class Decode extends PipelineStage(new FetchToDecode, new DecodeToExecute) {
     InstructionType.S -> upstream.data.instruction.extractImmediate.sType,
 
   )
+  val source = VecInit(upstream.data.instruction(19,15), upstream.data.instruction(24,20))
+  val destination = upstream.data.instruction(11,7)
   val funct3 = upstream.data.instruction(14,12)
   val funct7 = Mux(upstream.data.control.isNotRegisterRegister, 0.U, upstream.data.instruction(31,15))
   val (opcode,_) = Opcode.safe(upstream.data.instruction(6,0))
 
 
+  io.forwarding.channel zip source foreach { case (channel, source) => channel.source := source}
   val operand = io.registerSources.data.zip(io.forwarding.channel).map { case (reg, channel) => Mux(channel.shouldForward, channel.value, reg)}
 
   val isCsrAccess = upstream.data.control.isSystem && funct3 =/= 0.U
@@ -57,15 +60,12 @@ class Decode extends PipelineStage(new FetchToDecode, new DecodeToExecute) {
     _.pc := upstream.data.pc
   )
 
-  io.forwarding.nextExecuteInfo.set(
-    _.canForward := upstream.data.control.hasRegisterWriteBack,
-    _.destination := upstream.data.destination
-  )
+
 
   io.hazardDetection.set(
-    _.destination := upstream.data.destination,
-    _.canForward := upstream.data.control.hasRegisterWriteBack,
-    _.isLoad := upstream.data.control.isLoad
+    _.source := source,
+    _.isJalr := upstream.data.control.isJalr,
+    _.isBranch := upstream.data.control.isBranch
   )
 
   downstream.data.set(
@@ -74,13 +74,14 @@ class Decode extends PipelineStage(new FetchToDecode, new DecodeToExecute) {
     _.operand(1) := Mux(upstream.data.control.add4, 4.U, lookUp(upstream.data.control.rightOperand) in (RightOperand.Register -> io.registerSources.data(1), RightOperand.Immediate -> immediate.asUInt)),
     _.csrIndex := immediate(11,0),
     _.writeValue := lookUp(upstream.data.control.writeSourceRegister) in (WriteSourceRegister.Left -> io.registerSources.data(0), WriteSourceRegister.Right -> io.registerSources.data(1)),
-    _.source := upstream.data.source,
-    _.destination := upstream.data.destination,
+    _.source := source,
+    _.destination := destination,
     _.funct3 := funct3,
     _.recoveryTarget := upstream.data.recoveryTarget,
     _.control.set(
-      _.isBranch := upstream.data.control.isBranch,
-      _.guess := upstream.data.control.guess,
+      _.isLoad := upstream.data.control.isLoad,
+      _.acceptsForwarding(0) := upstream.data.control.leftOperand === LeftOperand.Register,
+      _.acceptsForwarding(1) := upstream.data.control.rightOperand === RightOperand.Register,
       _.aluFunction := Mux(upstream.data.control.aluFunIsAdd, AluFunction.Addition, AluFunction.safe(funct7(5) ## funct3)._1),
       _.memoryOperation := MemoryOperation.safe(opcode.asUInt.apply(5))._1,
       _.withSideEffects.set(
