@@ -1,5 +1,7 @@
-/*.cache
-/*.hw
-/*.ip_user_files
-/*.runs
-/*.sim
+/.Xil
+/*.jou
+/*.log
+/*.rpt
+/*.bit
+usage_statistics_webtalk.html
+usage_statistics_webtalk.xml
