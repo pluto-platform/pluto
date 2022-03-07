@@ -15,5 +15,5 @@ firrtl_black_box_resource_files.f
 /synthesis/vivado/*.ip_user_files
 /synthesis/vivado/*.runs
 /synthesis/vivado/*.sim
-/asm/*
-!/asm/*.s
+/asm/*.out
+/asm/*.bin
