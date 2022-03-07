@@ -13,7 +13,7 @@ class Top extends Module {
   })
   val pipeline = Module(new Pipeline)
 
-  val simpleBlink = Files.readAllBytes(Paths.get("asm/blinkTest.bin"))
+  val simpleBlink = Files.readAllBytes(Paths.get("asm/blink.bin"))
     .map(_.toLong & 0xFF)
     .grouped(4)
     .map(a => a(0) | (a(1) << 8) | (a(2) << 16) | (a(3) << 24))

@@ -26,6 +26,9 @@ class Execute extends PipelineStage(new DecodeToExecute, new ExecuteToMemory) {
   val operand = (upstream.data.operand, io.forwarding.channel, upstream.data.control.acceptsForwarding)
     .zipped
     .map { case (reg, channel, accepts) => Mux(channel.shouldForward && accepts, channel.value, reg)}
+  val writeBackValue = Mux(upstream.data.control.withSideEffects.isCsrWrite && io.forwarding.channel(0).shouldForward, io.forwarding.channel(0).value, Mux( // TODO: when imm csr then source(1) needs to go here
+    !upstream.data.control.withSideEffects.isCsrWrite && io.forwarding.channel(1).shouldForward, io.forwarding.channel(1).value, upstream.data.writeValue)
+  )
 
   val alu = Module(new ALU)
   alu.io.set(
@@ -48,7 +51,7 @@ class Execute extends PipelineStage(new DecodeToExecute, new ExecuteToMemory) {
     _.pc := upstream.data.pc,
     _.destination := upstream.data.destination,
     _.aluResult := alu.io.result,
-    _.writeValue := upstream.data.writeValue,
+    _.writeValue := writeBackValue,
     _.csrIndex := upstream.data.csrIndex,
     _.funct3 := upstream.data.funct3,
     _.control.set(

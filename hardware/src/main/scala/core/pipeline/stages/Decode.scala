@@ -70,10 +70,10 @@ class Decode extends PipelineStage(new FetchToDecode, new DecodeToExecute) {
 
   downstream.data.set(
     _.pc := upstream.data.pc,
-    _.operand(0) := lookUp(upstream.data.control.leftOperand) in (LeftOperand.Register -> io.registerSources.data(0), LeftOperand.PC -> upstream.data.pc),
-    _.operand(1) := Mux(upstream.data.control.add4, 4.U, lookUp(upstream.data.control.rightOperand) in (RightOperand.Register -> io.registerSources.data(1), RightOperand.Immediate -> immediate.asUInt)),
+    _.operand(0) := lookUp(upstream.data.control.leftOperand) in (LeftOperand.Register -> operand(0), LeftOperand.PC -> upstream.data.pc),
+    _.operand(1) := Mux(upstream.data.control.add4, 4.U, lookUp(upstream.data.control.rightOperand) in (RightOperand.Register -> operand(1), RightOperand.Immediate -> immediate.asUInt)),
     _.csrIndex := immediate(11,0),
-    _.writeValue := lookUp(upstream.data.control.writeSourceRegister) in (WriteSourceRegister.Left -> io.registerSources.data(0), WriteSourceRegister.Right -> io.registerSources.data(1)),
+    _.writeValue := lookUp(upstream.data.control.writeSourceRegister) in (WriteSourceRegister.Left -> operand(0), WriteSourceRegister.Right -> operand(1)),
     _.source := source,
     _.destination := destination,
     _.funct3 := funct3,

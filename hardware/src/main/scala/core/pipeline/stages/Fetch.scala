@@ -81,7 +81,7 @@ class Fetch extends PipelineStage(new ToFetch, new FetchToDecode) {
       _.isStore := isStore,
       _.isImmediate := isImmediate,
       _.isSystem := isSystem,
-      _.aluFunIsAdd := isNotRegisterRegisterOperation && isImmediate,
+      _.aluFunIsAdd := isNotRegisterRegisterOperation && !isImmediate,
       _.add4 := jump || isJalr,
       _.isNotRegisterRegister := isNotRegisterRegisterOperation,
       _.destinationIsNonZero := destinationIsNoneZero,
