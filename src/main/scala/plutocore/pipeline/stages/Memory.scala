@@ -5,7 +5,6 @@ import plutocore.pipeline.ControlTypes.{BitMaskerFunction, MemoryAccessWidth, Me
 import plutocore.pipeline.Pipeline.DataChannel
 import plutocore.pipeline.PipelineInterfaces.{ExecuteToMemory, MemoryToWriteBack}
 import plutocore.pipeline.{BitMasker, ControlAndStatusRegisterFile, Forwarding, Hazard, PipelineStage}
-import plutocore.Hazard
 import lib.util.BundleItemAssignment
 
 class Memory extends PipelineStage(new ExecuteToMemory, new MemoryToWriteBack) {

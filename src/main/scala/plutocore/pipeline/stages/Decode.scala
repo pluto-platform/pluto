@@ -3,7 +3,6 @@ package plutocore.pipeline.stages
 import chisel3._
 import plutocore.pipeline.ControlTypes.{AluFunction, BitMaskerFunction, InstructionType, LeftOperand, MemoryAccessWidth, MemoryOperation, RightOperand, WriteBackSource, WriteSourceRegister}
 import plutocore.pipeline.PipelineInterfaces.{DecodeToExecute, FetchToDecode}
-import plutocore.Hazard
 import plutocore.pipeline.{Branching, Forwarding, Hazard, IntegerRegisterFile, PipelineStage}
 import plutocore.lib.Immediates.FromInstructionToImmediate
 import lib.LookUp._

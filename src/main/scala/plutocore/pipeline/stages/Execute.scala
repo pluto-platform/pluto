@@ -5,7 +5,6 @@ import chisel3.util.Valid
 import plutocore.pipeline.ControlTypes.AluFunction
 import plutocore.pipeline.PipelineInterfaces.{DecodeToExecute, ExecuteToMemory}
 import plutocore.pipeline.{ALU, ControlAndStatusRegisterFile, Forwarding, Hazard, PipelineStage}
-import plutocore.Hazard
 import lib.util.BundleItemAssignment
 
 // TODO: add csr access stall here or in decode

@@ -6,7 +6,6 @@ import plutocore.pipeline.ControlTypes.{InstructionType, LeftOperand, RightOpera
 import plutocore.pipeline.Pipeline.InstructionChannel
 import plutocore.pipeline.PipelineInterfaces._
 import plutocore.pipeline.{Branching, IntegerRegisterFile, PipelineStage}
-import plutocore.Hazard
 import plutocore.lib.Immediates.FromInstructionToImmediate
 import lib.LookUp._
 import lib.util.BundleItemAssignment

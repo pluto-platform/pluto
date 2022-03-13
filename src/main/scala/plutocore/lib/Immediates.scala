@@ -1,7 +1,7 @@
 package plutocore.lib
 
 import chisel3.util.Fill
-import chisel3.{SInt, UInt}
+import chisel3._
 
 object Immediates {
 
