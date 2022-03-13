@@ -4,7 +4,6 @@
 /.bsp
 /.idea
 /build
-/generated
 *.v
 *.fir
 *.anno.json
