@@ -1,12 +1,12 @@
 package plutocore.pipeline.stages
 
 import chisel3._
-import plutocore.pipeline.ControlTypes.{AluFunction, BitMaskerFunction, InstructionType, LeftOperand, MemoryAccessWidth, MemoryOperation, RightOperand, WriteBackSource, WriteSourceRegister}
+import plutocore.pipeline.ControlTypes.{AluFunction, InstructionType, LeftOperand, MemoryOperation, RightOperand}
 import plutocore.pipeline.PipelineInterfaces.{DecodeToExecute, FetchToDecode}
 import plutocore.pipeline.{Branching, Forwarding, Hazard, IntegerRegisterFile, PipelineStage}
 import plutocore.lib.Immediates.FromInstructionToImmediate
 import lib.LookUp._
-import lib.util.{BoolVec, BundleItemAssignment}
+import lib.util.{BoolVec, BundleItemAssignment, SeqToVecMethods}
 import plutocore.lib.Opcode
 
 class Decode extends PipelineStage(new FetchToDecode, new DecodeToExecute) {
@@ -27,12 +27,25 @@ class Decode extends PipelineStage(new FetchToDecode, new DecodeToExecute) {
   val source = VecInit(upstream.data.instruction(19,15), upstream.data.instruction(24,20))
   val destination = upstream.data.instruction(11,7)
   val funct3 = upstream.data.instruction(14,12)
-  val funct7 = Mux(upstream.data.control.isNotRegisterRegister, 0.U, upstream.data.instruction(31,15))
+  val funct7 = Mux(!upstream.data.control.isRegister, 0.U, upstream.data.instruction(31,15))
   val (opcode,_) = Opcode.safe(upstream.data.instruction(6,0))
 
 
   io.forwarding.channel zip source foreach { case (channel, source) => channel.source := source}
-  val operand = io.registerSources.data.zip(io.forwarding.channel).map { case (reg, channel) => Mux(channel.shouldForward, channel.value, reg)}
+  val operand = io.registerSources.data.zip(io.forwarding.channel).map { case (reg, channel) => Mux(channel.shouldForward, channel.value, reg) }.toVec
+
+  val aluOperand = VecInit(
+    lookUp(upstream.data.control.leftOperand) in (
+      LeftOperand.Register -> operand(0),
+      LeftOperand.PC -> upstream.data.pc,
+      LeftOperand.Zero -> 0.U
+    ),
+    lookUp(upstream.data.control.rightOperand) in (
+      RightOperand.Register -> operand(1),
+      RightOperand.Immediate -> immediate.asUInt,
+      RightOperand.Four -> 4.U
+    )
+  )
 
   val isCsrAccess = upstream.data.control.isSystem && funct3 =/= 0.U
 
@@ -69,14 +82,12 @@ class Decode extends PipelineStage(new FetchToDecode, new DecodeToExecute) {
 
   downstream.data.set(
     _.pc := upstream.data.pc,
-    _.operand(0) := lookUp(upstream.data.control.leftOperand) in (LeftOperand.Register -> operand(0), LeftOperand.PC -> upstream.data.pc),
-    _.operand(1) := Mux(upstream.data.control.add4, 4.U, lookUp(upstream.data.control.rightOperand) in (RightOperand.Register -> operand(1), RightOperand.Immediate -> immediate.asUInt)),
+    _.operand := aluOperand,
     _.csrIndex := immediate(11,0),
-    _.writeValue := lookUp(upstream.data.control.writeSourceRegister) in (WriteSourceRegister.Left -> operand(0), WriteSourceRegister.Right -> operand(1)),
+    _.writeValue := operand(upstream.data.control.writeSourceRegister),
     _.source := source,
     _.destination := destination,
     _.funct3 := funct3,
-    _.recoveryTarget := upstream.data.recoveryTarget,
     _.control.set(
       _.isLoad := upstream.data.control.isLoad,
       _.acceptsForwarding(0) := upstream.data.control.leftOperand === LeftOperand.Register,

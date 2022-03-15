@@ -11,6 +11,7 @@ object PipelineInterfaces {
 
   class FetchToDecode extends Bundle {
     val pc = UInt(32.W)
+    val nextPc = UInt(32.W)
 
     val instruction = UInt(32.W)
     val validOpcode = Bool()
@@ -25,14 +26,14 @@ object PipelineInterfaces {
       val isBranch = Bool()
       val isLoad = Bool()
       val isStore = Bool()
+      val isLui = Bool()
       val isImmediate = Bool()
       val isSystem = Bool()
+      val isRegister = Bool()
       val aluFunIsAdd = Bool()
-      val isNotRegisterRegister = Bool()
-      val add4 = Bool()
       val destinationIsNonZero = Bool()
       val hasRegisterWriteBack = Bool()
-      val writeSourceRegister = WriteSourceRegister()
+      val writeSourceRegister = UInt(1.W)
       val leftOperand = LeftOperand()
       val rightOperand = RightOperand()
       val instructionType = InstructionType()
@@ -49,8 +50,6 @@ object PipelineInterfaces {
     val csrIndex = UInt(12.W)
 
     val funct3 = UInt(3.W)
-
-    val recoveryTarget = UInt(32.W)
 
     val control = new Bundle {
       val isLoad = Bool()

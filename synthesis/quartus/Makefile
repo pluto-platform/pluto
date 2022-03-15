@@ -1,7 +1,7 @@
 # Inspired by: https://github.com/mfischer/Altera-Makefile/blob/master/quartus/Makefile
 
 
-PROJECT = Ferrum
+PROJECT = Pluto
 TOP_LEVEL = Top
 
 PROJECT_FILES = $(PROJECT).qpf $(PROJECT).qsf $(PROJECT).sdc

@@ -1,5 +1,5 @@
 
-PROJECT = Ferrum
+PROJECT = Pluto
 TOP_LEVEL = Top
 PROJECT_FILES = synth.tcl config.tcl
 

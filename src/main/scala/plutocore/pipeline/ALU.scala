@@ -24,13 +24,13 @@ class ALU extends Module {
     Addition             -> (sOp(0) + sOp(1)).asUInt,
     Subtraction          -> (sOp(0) - sOp(1)).asUInt,
     ShiftLeft            -> (uOp(0) << shamt),
-    CompareSigned        -> (sOp(0) < sOp(1)).asUInt,
-    CompareUnsinged      -> (uOp(0) < uOp(1)).asUInt,
     Xor                  -> (uOp(0) ^ uOp(1)),
     ShiftRight           -> (uOp(0) >> shamt),
     ShiftRightArithmetic -> (sOp(0) >> shamt).asUInt,
     Or                   -> (uOp(0) | uOp(1)),
-    And                  -> (uOp(0) & uOp(1))
+    And                  -> (uOp(0) & uOp(1)),
+    LessThanSigned       -> (sOp(0) < sOp(1)).asUInt,
+    LessThanUnsigned     -> (uOp(0) < uOp(1)).asUInt
   )
 
 }

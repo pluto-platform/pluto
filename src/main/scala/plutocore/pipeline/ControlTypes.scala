@@ -6,31 +6,27 @@ import lib.LookUp.lookUp
 import plutocore.lib.Opcode
 
 object ControlTypes {
-  // funct7(5) ## funct3 when Opcode.register or Opcode.immediate
+  // funct7(5) ## funct3 when Opcode.register
+  // funct3 when Opcode.Immediate
   object AluFunction extends ChiselEnum {
     val Addition = Value(0x0.U)
     val ShiftLeft = Value(0x1.U)
-    val CompareSigned = Value(0x2.U)
-    val CompareUnsinged = Value(0x3.U)
+    val LessThanSigned = Value(0x2.U)
+    val LessThanUnsigned = Value(0x3.U)
     val Xor = Value(0x4.U)
     val ShiftRight = Value(0x5.U)
     val Or = Value(0x6.U)
     val And = Value(0x7.U)
     val Subtraction = Value(0x8.U)
-    val Add4 = Value(0x09.U) // triggered by jal and jalr
     val ShiftRightArithmetic = Value(0xD.U)
   }
 
   object LeftOperand extends ChiselEnum {
-    val Register, PC = Value
+    val Register, PC, Zero = Value
   }
 
   object RightOperand extends ChiselEnum {
-    val Register, Immediate = Value
-  }
-
-  object WriteSourceRegister extends ChiselEnum {
-    val Left, Right = Value
+    val Register, Immediate, Four = Value
   }
 
   object InstructionType extends ChiselEnum {
