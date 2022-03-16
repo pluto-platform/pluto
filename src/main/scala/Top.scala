@@ -1,6 +1,7 @@
 import chisel3._
 import lib.modules.SyncROM
 import lib.util.BundleItemAssignment
+import plutocore.branchpredictor.LoopBranchPredictor
 import plutocore.pipeline.ControlTypes.{MemoryAccessResult, MemoryOperation}
 import plutocore.pipeline.Pipeline
 
@@ -10,7 +11,7 @@ class Top extends Module {
   val io = IO(new Bundle {
     val led = Output(Bool())
   })
-  val pipeline = Module(new Pipeline)
+  val pipeline = Module(new Pipeline(new LoopBranchPredictor))
 
   val simpleBlink = Files.readAllBytes(Paths.get("asm/blink.bin"))
     .map(_.toLong & 0xFF)
@@ -35,7 +36,7 @@ class Top extends Module {
     0x00008067L,
   )
 
-  val rom = SyncROM(simpleBlink.map(_.U(32.W)),simulation = true)
+  val rom = SyncROM(simpleBlink.map(_.U(32.W)),simulation = false)
 
   rom.io.address := pipeline.io.instructionChannel.request.bits.address(31,2)
   pipeline.io.instructionChannel.set(
@@ -43,16 +44,20 @@ class Top extends Module {
     _.response.valid := 1.B,
     _.response.bits.instruction := rom.io.data
   )
+  val ram = SyncReadMem(4096, UInt(32.W))
   pipeline.io.dataChannel.set(
     _.request.ready := 1.B,
     _.response.set(
       _.valid := 1.B,
       _.bits.set(
-        _.readData := 0.U,
+        _.readData := ram.read(pipeline.io.dataChannel.request.bits.address),
         _.result := MemoryAccessResult.Success
       )
     )
   )
+  when(pipeline.io.dataChannel.request.valid && pipeline.io.dataChannel.request.bits.op === MemoryOperation.Write) {
+    ram.write(pipeline.io.dataChannel.request.bits.address(11,0), pipeline.io.dataChannel.request.bits.writeData)
+  }
 
   val ledReg = RegInit(0.B)
 

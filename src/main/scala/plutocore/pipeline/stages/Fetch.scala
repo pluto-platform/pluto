@@ -8,6 +8,7 @@ import plutocore.pipeline.PipelineInterfaces._
 import plutocore.pipeline.{Branching, IntegerRegisterFile, PipelineStage}
 import plutocore.lib.Immediates.FromInstructionToImmediate
 import lib.util.BundleItemAssignment
+import plutocore.branchpredictor.BranchPrediction
 import plutocore.lib.Opcode
 
 
@@ -39,7 +40,7 @@ class Fetch extends PipelineStage(new ToFetch, new FetchToDecode) {
   val isRegister = opcode === Opcode.register
   val destinationIsNoneZero = destination =/= 0.U
 
-  val leftOperand = Mux(isAuipc, LeftOperand.PC, Mux(isLui, LeftOperand.Zero, LeftOperand.Register))
+  val leftOperand = Mux(isAuipc || isJalr || isJump, LeftOperand.PC, Mux(isLui, LeftOperand.Zero, LeftOperand.Register))
   val rightOperand = Mux(isRegister, RightOperand.Register, Mux(isJalr || isJump, RightOperand.Four, RightOperand.Immediate))
 
   // calculate jump or branch target

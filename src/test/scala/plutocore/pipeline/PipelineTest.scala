@@ -7,13 +7,14 @@ import ControlTypes.MemoryOperation
 import plutocore.pipeline.PipelineTest.PipelineWrapper
 import lib.util.BundleItemAssignment
 import org.scalatest.flatspec.AnyFlatSpec
+import plutocore.branchpredictor.LoopBranchPredictor
 
 import java.nio.file.{Files, Paths}
 
 class PipelineTest extends AnyFlatSpec with ChiselScalatestTester {
 
   def pipelineTest(mem: Seq[BigInt], cycles: Int)(initialState: Pipeline.State, finalState: Pipeline.State): TestResult = {
-    test(new Pipeline(initialState)).withAnnotations(Seq(WriteVcdAnnotation)) { dut =>
+    test(new Pipeline(new LoopBranchPredictor,initialState)).withAnnotations(Seq(WriteVcdAnnotation)) { dut =>
 
       dut.io.instructionChannel.request.ready.poke(1.B)
 
@@ -45,7 +46,7 @@ class PipelineTest extends AnyFlatSpec with ChiselScalatestTester {
   behavior of "Pipeline"
 
   it should "be nice" in {
-    test(new Pipeline).withAnnotations(Seq(WriteVcdAnnotation)) { dut =>
+    test(new Pipeline(new LoopBranchPredictor)).withAnnotations(Seq(WriteVcdAnnotation)) { dut =>
 
       val prog = Seq(
         0x08000093L

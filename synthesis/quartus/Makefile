@@ -59,7 +59,7 @@ asm.chg:
 	$(STAMP) asm.chg
 
 program: $(PROJECT).sof
-	killall jtagd
+	killall jtagd || true
 	jtagd
 	jtagconfig
 	quartus_pgm --no_banner --mode=jtag -o "P;$(PROJECT).sof"

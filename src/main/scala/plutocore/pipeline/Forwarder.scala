@@ -3,6 +3,30 @@ package plutocore.pipeline
 import chisel3._
 import lib.util.Delay
 
+object Forwarding {
+  class ForwardingChannel extends Bundle {
+    val source = Output(UInt(5.W))
+    val shouldForward = Input(Bool())
+    val value = Input(UInt(32.W))
+  }
+
+  class DecodeChannel extends Bundle {
+    val channel = Vec(2, new ForwardingChannel)
+  }
+  class ExecuteChannel extends Bundle {
+    val channel = Vec(2, new ForwardingChannel)
+  }
+  class MemoryChannel extends Bundle {
+    val destination = Output(UInt(5.W))
+    val canForward = Output(Bool())
+    val value = Output(UInt(32.W))
+  }
+  class WriteBackChannel extends Bundle {
+    val destination = Output(UInt(5.W))
+    val canForward = Output(Bool())
+    val value = Output(UInt(32.W))
+  }
+}
 class Forwarder extends Module {
 
   val io = IO(new Bundle {

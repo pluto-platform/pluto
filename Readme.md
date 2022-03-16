@@ -9,7 +9,7 @@ riscv64-unknown-elf-objcopy -O binary blinkTest blinkTest.bin
 ```
 
 # performance counters
-- `minstret`: send incr signal from wb
+- `minstret`: send incr signal from wb (not for ecall)
 - `mcycle`: always plus one
 - `mhpmcounterx`: how many? others are ro 0
 

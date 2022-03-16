@@ -43,7 +43,7 @@ class Memory extends PipelineStage(new ExecuteToMemory, new MemoryToWriteBack) {
 
   io.forwarding.set(
     _.destination := upstream.data.destination,
-    _.canForward := upstream.data.control.withSideEffects.hasRegisterWriteBack,
+    _.canForward := upstream.data.control.withSideEffects.hasRegisterWriteBack && !upstream.data.control.isLoad,
     _.value := upstream.data.aluResult
   )
 

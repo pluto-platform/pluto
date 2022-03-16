@@ -6,6 +6,7 @@ import lib.Interfaces.Channel
 import lib.util.{BundleItemAssignment, FieldOptionExtractor}
 import ControlTypes.{MemoryAccessResult, MemoryAccessWidth, MemoryOperation}
 import PipelineInterfaces.{DecodeToExecute, ExecuteToMemory, FetchToDecode, MemoryToWriteBack}
+import plutocore.branchpredictor.{BranchPredictor, LoopBranchPredictor}
 import plutocore.pipeline.stages._
 
 
@@ -57,10 +58,13 @@ object Pipeline {
 }
 
 
-class Pipeline(sim: Option[Pipeline.State] = None) extends Module {
+class Pipeline(
+  branchPredictorGen: => BranchPredictor,
+  state: Option[Pipeline.State] = None
+  ) extends Module {
 
   val io = IO(new Pipeline.PipelineIO)
-  val simulation = if(sim.isDefined) Some(IO(Output(new Pipeline.PipelineSimulationIO))) else None
+  val simulation = if(state.isDefined) Some(IO(Output(new Pipeline.PipelineSimulationIO))) else None
 
 
   object Stage {
@@ -86,9 +90,9 @@ class Pipeline(sim: Option[Pipeline.State] = None) extends Module {
       .suggestName("reg_memory_writeback")
   }
   object Components {
-    val pc = Module(new ProgramCounter(sim.getFieldOption(_.pc)))
+    val pc = Module(new ProgramCounter(state.getFieldOption(_.pc)))
       .suggestName("pc")
-    val registerFile = Module(new IntegerRegisterFile(sim.getFieldOption(_.registerFile)))
+    val registerFile = Module(new IntegerRegisterFile(state.getFieldOption(_.registerFile)))
       .suggestName("registerfile")
     val forwader = Module(new Forwarder)
       .suggestName("forwarder")
@@ -98,7 +102,7 @@ class Pipeline(sim: Option[Pipeline.State] = None) extends Module {
       .suggestName("csrfile")
     val branchingUnit = Module(new BranchingUnit)
       .suggestName("branching_unit")
-    val branchPredictor = Module(new SimpleBranchPredictor)
+    val branchPredictor = Module(branchPredictorGen)
       .suggestName("branch_predictor")
   }
 
@@ -154,17 +158,14 @@ class Pipeline(sim: Option[Pipeline.State] = None) extends Module {
     _.pc <> Components.pc.io.branching,
     _.predictor <> Components.branchPredictor.io
   )
+  Components.branchPredictor.io.pc <> Components.pc.io.instructionRequest.bits.address
 
-  if(sim.isDefined) {
+  if(state.isDefined) {
     simulation.get.pc := Components.pc.io.value
     simulation.get.registerFile := Components.registerFile.simulation.get.registers
   }
 
 
-}
-
-object PipelineEmitter extends App {
-  emitVerilog(new Pipeline)
 }
 
 /*

@@ -3,6 +3,26 @@ package plutocore.pipeline
 import chisel3._
 import lib.util.{BoolVec, Delay}
 
+object Hazard {
+  class DecodeChannel extends Bundle {
+    val source = Output(Vec(2, UInt(5.W)))
+    val isBranch = Output(Bool())
+    val isJalr = Output(Bool())
+
+    val hazard = Input(Bool())
+  }
+  class ExecuteChannel extends Bundle {
+    val destination = Output(UInt(5.W))
+    val isLoad = Output(Bool())
+    val canForward = Output(Bool())
+  }
+  class MemoryChannel extends Bundle {
+    val destination = Output(UInt(5.W))
+    val isLoad = Output(Bool())
+    val canForward = Output(Bool())
+  }
+}
+
 class HazardDetector extends Module {
 
   val io = IO(new Bundle {

@@ -7,7 +7,7 @@ import firrtl_interpreter.{BlackBoxFactory, BlackBoxImplementation, Concrete, Ty
 import treadle.{ScalaBlackBox, ScalaBlackBoxFactory}
 
 object SyncROM {
-  def apply[T <: Data](table: Seq[T], simulation: Boolean = false): SyncROM[T] = Module(new SyncROM(table,simulation))
+  def apply[T <: Data](table: Seq[T], simulation: Boolean = false): SyncROM[T] = Module(new SyncROM(Seq.fill(32)(table).reduce(_++_),simulation))
 }
 
 class SyncROM[T <: Data](table: Seq[T], simulation: Boolean = false) extends Module {
@@ -46,14 +46,9 @@ class BlackBoxSyncROM(program: Seq[BigInt]) extends BlackBox with HasBlackBoxInl
        |    input [31:0] address,
        |    output reg [31:0] data
        |);
-       |reg [29:0] addrReg;
        |
        |always @(posedge clock) begin
-       |  addrReg <= address[31:2];
-       |end
-       |
-       |always @(addrReg) begin
-       |  case(addrReg)
+       |  case(address[31:2])
        |$romStr
        |  endcase
        |end
