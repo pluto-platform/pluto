@@ -15,11 +15,12 @@ class ProgramCounter(init: Option[BigInt] = None) extends Module{
     val value = Output(UInt(32.W))
     val stall = Input(Bool())
     val branching = new Branching.ProgramCounterChannel
+    val exception = new Exception.ProgramCounterChannel
   })
 
   val reg = RegInit(init.getOrElse(BigInt(0)).U(32.W))
 
-  val nextReg = Mux(io.stall, reg, io.branching.next)
+  val nextReg = Mux(io.exception.jump, io.exception.target, Mux(io.stall, reg, io.branching.next))
   reg := nextReg
 
   io.instructionRequest.set(
