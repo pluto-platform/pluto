@@ -11,5 +11,6 @@ object RandomHelper {
   def uRands(range: Range, ranges: Range*): Seq[UInt] = uRand(range) +: ranges.map(uRand)
   def uRand(width: Width): UInt = BigInt(width.get, scala.util.Random).U
   def uRands(width: Width, widths: Width*): Seq[UInt] = uRand(width) +: widths.map(uRand)
+  def uRands(n: Int, width: Width): Seq[UInt] = Seq.fill(n)(uRand(width))
 
 }
