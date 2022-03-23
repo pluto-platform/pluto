@@ -1,5 +1,6 @@
 package charon
 
+import Chisel.DecoupledIO
 import chisel3._
 import chisel3.experimental.ChiselEnum
 
@@ -17,7 +18,7 @@ object Tilelink {
 
   // (address & (2^size -1) == 0) always holds
 
-  case class PerLinkParameters(
+  case class LinkParameters(
                               w: Int, // Width of the data bus in bytes
                               a: Int, // Width of each address field in bits
                               z: Int, // Width of each size field in bits
@@ -25,11 +26,11 @@ object Tilelink {
                               i: Int  // Number of bits to disambiguate per-link slaves
                               )
 
-  abstract class Channel extends Bundle {
-    val valid = Bool()
+  abstract class Channel extends DecoupledIO(new Bundle {}) {
+
   }
   object Channel {
-    class A(params: Tilelink.PerLinkParameters) extends Bundle {
+    class A(implicit params: Tilelink.LinkParameters) extends Channel {
       import params._
       val opcode = Tilelink.Operation()
       val param = UInt(3.W)
@@ -41,7 +42,7 @@ object Tilelink {
       val corrupt = Bool()
     }
 
-    class D(params: Tilelink.PerLinkParameters) extends Bundle {
+    class D(implicit params: Tilelink.LinkParameters) extends Channel {
       import params._
       val opcode = Tilelink.Response()
       val param = UInt(2.W)
@@ -53,6 +54,21 @@ object Tilelink {
       val corrupt = Bool()
     }
   }
+
+  abstract class Interface extends Bundle {
+
+  }
+  object Interface {
+    class Manager(implicit params: Tilelink.LinkParameters) extends Interface {
+      val a = new Channel.A
+      val d = Flipped(new Channel.D)
+    }
+    class Client(implicit params: Tilelink.LinkParameters) extends Interface {
+      val a = Flipped(new Channel.A)
+      val d = new Channel.D
+    }
+  }
+
 
 
 }

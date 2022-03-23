@@ -35,7 +35,7 @@ object Exception {
     val jump = Input(Bool())
   }
   class InterruptChannel extends Bundle {
-    val
+
   }
 }
 
