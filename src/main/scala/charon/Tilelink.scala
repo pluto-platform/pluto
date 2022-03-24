@@ -40,6 +40,13 @@ object Tilelink {
       val mask = Vec(w, Bool())
       val data = Vec(w,UInt(8.W))
       val corrupt = Bool()
+
+      def filterByRange(range: AddressRange): Tilelink.Channel.A = {
+        val a = Wire(new Tilelink.Channel.A)
+        a <> this
+        a.valid := range.contains(address) && valid
+        a
+      }
     }
 
     class D(implicit params: Tilelink.LinkParameters) extends Channel {
@@ -52,6 +59,13 @@ object Tilelink {
       val denied = Bool()
       val data = Vec(w,UInt(8.W))
       val corrupt = Bool()
+
+      def filterBySource(id: UInt): D = {
+        val d = Wire(new Tilelink.Channel.D)
+        d <> this
+        d.valid := source === id && valid
+        d
+      }
     }
   }
 
