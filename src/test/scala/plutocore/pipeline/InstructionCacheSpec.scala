@@ -4,6 +4,7 @@ import chisel3._
 import chiseltest._
 import plutocore.pipeline.InstructionCache.CacheDimension
 import org.scalatest.flatspec.AnyFlatSpec
+import plutocore.cache.InstructionCache
 
 class InstructionCacheSpec extends AnyFlatSpec with ChiselScalatestTester {
 
