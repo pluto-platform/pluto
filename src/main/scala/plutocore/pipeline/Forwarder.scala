@@ -36,18 +36,6 @@ class Forwarder extends Module {
     val writeBack = Flipped(new Forwarding.WriteBackChannel)
   })
 
-/*
-need to know whether stall occurs and set forwarding source accordingly
-
-- instruction ahead of branch changes either source register -> stall in decode -> forward from memory to decode
-- instruction ahead of jalr changes s0 -> stall in decode -> forward from memory to decode
-- instruction ahead is a load to either source register -> stall in decode -> forward from writeBack to execute
-- instruction ahead changes either source register -> forward from memory to execute
-- instruction two ahead changes either source register -> forward from memory to decode -> unless stall due to other channel -> forward from wb to dec
- */
-
-
-
   (io.decode.channel,io.execute.channel)
     .zipped.toList
     .foreach { case (decodeChannel, executeChannel) =>

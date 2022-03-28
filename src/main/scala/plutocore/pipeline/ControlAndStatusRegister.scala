@@ -13,5 +13,17 @@ object ControlAndStatusRegister {
     val mode = TrapMode()
     def base: UInt = base31_2 ## 0.U(2.W)
   }
+  class Interrupts extends Bundle {
+    val global = Bool()
+    val external = Bool()
+    val timer = Bool()
+    val software = Bool()
+    val custom = Vec(16, Bool())
+  }
+  class PerformanceCounterControl extends Bundle {
+    val cycle = Bool()
+    val timer = Bool()
+    val instructionsRetired = Bool()
+  }
 
 }
