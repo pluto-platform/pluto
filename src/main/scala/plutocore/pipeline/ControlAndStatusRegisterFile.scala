@@ -2,8 +2,8 @@ package plutocore.pipeline
 
 import chisel3._
 import chisel3.util._
+import lib.util.BundleItemAssignment
 import plutocore.pipeline.ControlAndStatusRegister.{Interrupts, PerformanceCounterControl, TrapMode}
-import plutocore.pipeline.ControlAndStatusRegisterFile.TimerChannel
 
 object ControlAndStatusRegisterFile {
 
@@ -24,12 +24,14 @@ object ControlAndStatusRegisterFile {
 class ControlAndStatusRegisterFile extends Module {
 
   val io = IO(new Bundle {
-    val readRequest = Input(new ControlAndStatusRegisterFile.ReadRequest)
+    val readRequest = Flipped(Valid(new ControlAndStatusRegisterFile.ReadRequest))
     val readResponse = Output(new ControlAndStatusRegisterFile.ReadResponse)
     val writeRequest = Flipped(Valid(new ControlAndStatusRegisterFile.WriteRequest))
     val instructionRetired = Input(Bool())
     val timerEnable = Output(Bool())
+    val exceptionUnit = new Exception.CSRChannel
   })
+
 
 
   val interruptEnableReg = RegInit(0.U.asTypeOf(new Interrupts))
@@ -44,7 +46,7 @@ class ControlAndStatusRegisterFile extends Module {
   val scratchRegister = RegInit(0.U(32.W))
 
   val exceptionPc = RegInit(0.U(32.W))
-  val exceptionCause = RegInit(0.U.asTypeOf(Exception.Cause()))
+  val exceptionCause = RegInit(Exception.Cause.None)
   val exceptionValue = RegInit(0.U(32.W))
 
 
@@ -55,8 +57,11 @@ class ControlAndStatusRegisterFile extends Module {
   when(counterEnableReg.instructionsRetired && !counterInhibitReg.instructionsRetired && io.instructionRetired) { instructionRetiredCounter := instructionRetiredCounter + 1.U }
 
   io.timerEnable := counterEnableReg.timer
+  io.exceptionUnit.set(
+    _.interruptEnable := interruptEnableReg
+  )
 
-  io.readResponse.value := RegNext(MuxLookup(io.readRequest.index, 0.U, Seq(
+  io.readResponse.value := RegNext(MuxLookup(io.readRequest.bits.index, 0.U, Seq(
     0xF11.U -> 0.U, // mvendorid: Vendor ID
     0xF12.U -> 0.U, // marchid: architecture ID
     0xF13.U -> 0.U, // mimpid: implementation ID

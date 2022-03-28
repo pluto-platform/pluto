@@ -36,7 +36,7 @@ class Top extends Module {
     0x00008067L,
   )
 
-  val rom = SyncROM(simpleBlink.map(_.U(32.W)),simulation = false)
+  val rom = SyncROM(simpleBlink.map(_.U(32.W)), simulation = true)
 
   rom.io.address := pipeline.io.instructionChannel.request.bits.address(31,2)
   pipeline.io.instructionChannel.set(

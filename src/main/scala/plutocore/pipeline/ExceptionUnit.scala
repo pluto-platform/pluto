@@ -4,15 +4,18 @@ import chisel3._
 import chisel3.experimental.ChiselEnum
 import plutocore.pipeline.Exception.ExceptionBundle
 import Exception.CauseTypeExtender
+import lib.util.BundleItemAssignment
+import plutocore.pipeline.ControlAndStatusRegister.Interrupts
 
 object Exception {
   object Cause extends ChiselEnum {
+    val None = Value(0.U)
     val LoadAddressMisaligned = Value(4.U)
     val LoadAccessFault = Value(5.U)
     val EnvironmentCallFromMachineMode = Value(11.U)
-    val MachineSoftwareInterrupt = Value(((1 << 31) | 3).U)
-    val MachineTimerInterrupt = Value(((1 << 31) | 7).U)
-    val MachineExternalInterrupt = Value(((1 << 31) | 11).U)
+    val MachineSoftwareInterrupt = Value(((1L << 31) | 3).U)
+    val MachineTimerInterrupt = Value(((1L << 31) | 7).U)
+    val MachineExternalInterrupt = Value(((1L << 31) | 11).U)
   }
   implicit class CauseTypeExtender(x: Cause.Type) {
     def isInterrupt: Bool = x.asUInt.apply(31)
@@ -26,8 +29,7 @@ object Exception {
   }
   class CSRChannel extends Bundle {
     val newException = Input(new ExceptionBundle)
-    val globalInterruptEnable = Output(Bool())
-    val interruptEnable = Output(Vec(32, Bool()))
+    val interruptEnable = Output(new Interrupts)
 
   }
   class ProgramCounterChannel extends Bundle {
@@ -50,10 +52,11 @@ class ExceptionUnit extends Module {
 
   })
 
-  val cause = Mux(io.writeBack.exception, io.writeBack.cause, io.decode.cause)
-
-  io.csr.interruptEnable(cause.value)
-
+  io.csr.newException := io.decode
+  io.programCounter.set(
+    _.target := 0.U,
+    _.jump := 0.B
+  )
 
 
 }

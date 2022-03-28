@@ -8,6 +8,8 @@ import plutocore.lib.Immediates.FromInstructionToImmediate
 import lib.LookUp._
 import lib.util.{BoolVec, BundleItemAssignment, SeqToVecMethods}
 import plutocore.lib.Opcode
+import plutocore.pipeline.Exception.ExceptionBundle
+import plutocore.pipeline.Exception
 
 class Decode extends PipelineStage(new FetchToDecode, new DecodeToExecute) {
 
@@ -16,6 +18,7 @@ class Decode extends PipelineStage(new FetchToDecode, new DecodeToExecute) {
     val branching = new Branching.DecodeChannel
     val hazardDetection = new Hazard.DecodeChannel
     val forwarding = new Forwarding.DecodeChannel
+    val exception = Output(new ExceptionBundle)
   })
 
   val immediate = lookUp(upstream.data.control.instructionType) in (
@@ -72,7 +75,12 @@ class Decode extends PipelineStage(new FetchToDecode, new DecodeToExecute) {
     _.pc := upstream.data.pc
   )
 
-
+  io.exception.set(
+    _.cause := Exception.Cause.None,
+    _.value := 0.U,
+    _.exception := 0.B,
+    _.pc := upstream.data.pc
+  )
 
   io.hazardDetection.set(
     _.source := source,

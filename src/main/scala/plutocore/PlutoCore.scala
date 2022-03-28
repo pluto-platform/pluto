@@ -16,8 +16,8 @@ object PlutoCore {
 }
 
 class PlutoCore(
-               instructionCache : Option[( => InstructionCache)],
-               dataCache        : Option[( => DataCache)],
+               instructionCache : Option[() => InstructionCache],
+               dataCache        : Option[() => DataCache],
                branchPredictor  : => BranchPredictor = new LoopBranchPredictor
                ) extends Module {
 

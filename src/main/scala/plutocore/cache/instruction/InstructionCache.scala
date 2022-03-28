@@ -17,6 +17,6 @@ object InstructionCache {
 
 abstract class InstructionCache extends Module {
 
-  val io =
+  val io = None
 
 }

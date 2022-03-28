@@ -104,6 +104,8 @@ class Pipeline(
       .suggestName("branching_unit")
     val branchPredictor = Module(branchPredictorGen)
       .suggestName("branch_predictor")
+    val exceptionUnit = Module(new ExceptionUnit)
+      .suggestName("exception_unit")
   }
 
   Stage.fetch
@@ -156,9 +158,16 @@ class Pipeline(
     _.fetch <> Stage.fetch.io.branching,
     _.decode <> Stage.decode.io.branching,
     _.pc <> Components.pc.io.branching,
-    _.predictor <> Components.branchPredictor.io
+    _.predictor <> Components.branchPredictor.io.branchingUnit
   )
   Components.branchPredictor.io.pc <> Components.pc.io.instructionRequest.bits.address
+  Components.csrFile.io.instructionRetired := Stage.writeBack.io.instructionRetired
+  Components.exceptionUnit.io.set(
+    _.decode <> Stage.decode.io.exception,
+    _.writeBack <> Stage.writeBack.io.exception,
+    _.csr <> Components.csrFile.io.exceptionUnit,
+    _.programCounter <> Components.pc.io.exception
+  )
 
   if(state.isDefined) {
     simulation.get.pc := Components.pc.io.value

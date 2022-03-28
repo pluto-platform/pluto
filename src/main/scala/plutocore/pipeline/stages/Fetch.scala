@@ -8,7 +8,6 @@ import plutocore.pipeline.PipelineInterfaces._
 import plutocore.pipeline.{Branching, IntegerRegisterFile, PipelineStage}
 import plutocore.lib.Immediates.FromInstructionToImmediate
 import lib.util.BundleItemAssignment
-import plutocore.branchpredictor.BranchPrediction
 import plutocore.lib.Opcode
 
 

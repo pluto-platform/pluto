@@ -13,7 +13,7 @@ object Arbiter {
   }
 
   def apply[T <: Tilelink.Channel](channels: Vec[T]): T = {
-    channels.reduceTree(apply)
+    channels.reduceTree((l,r) => apply(l,r))
   }
 
 }
