@@ -45,6 +45,7 @@ class Execute extends PipelineStage(new DecodeToExecute, new ExecuteToMemory) {
 
   val jump = upstream.data.control.isJalr || upstream.data.control.isJal || (upstream.data.control.isBranch && comparison)
 
+  // FIXME: operand(0) is not register when jalr
   val target = (Mux(upstream.data.control.isJalr, operand(0), upstream.data.pc).asSInt + upstream.data.offset).asUInt
 
   val alu = Module(new ALU)
