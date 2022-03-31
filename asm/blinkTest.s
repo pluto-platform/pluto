@@ -1,3 +1,4 @@
+nop
 li x5, 0x10000000 # led address
 li x4, 0 # led state
 li x1, 4 # loop bound

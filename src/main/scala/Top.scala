@@ -1,23 +1,34 @@
 import chisel3._
-import lib.modules.SyncROM
+import chisel3.experimental.{ChiselAnnotation, annotate}
+import chisel3.util.experimental.loadMemoryFromFileInline
+import firrtl.annotations.MemorySynthInit
 import lib.util.BundleItemAssignment
-import plutocore.branchpredictor.LoopBranchPredictor
-import plutocore.pipeline.ControlTypes.{MemoryAccessResult, MemoryOperation}
-import plutocore.pipeline.Pipeline
+import cores.lib.ControlTypes.{MemoryAccessResult, MemoryOperation}
 
+import java.io.{File, PrintWriter}
 import java.nio.file.{Files, Paths}
 
 class Top extends Module {
   val io = IO(new Bundle {
     val led = Output(Bool())
   })
-  val pipeline = Module(new Pipeline(new LoopBranchPredictor))
+  val pipeline = Module(new cores.nix.Pipeline)
 
-  val simpleBlink = Files.readAllBytes(Paths.get("asm/blink.bin"))
+  annotate(new ChiselAnnotation {
+    override def toFirrtl = MemorySynthInit
+  })
+
+  val simpleBlink = Files.readAllBytes(Paths.get("asm/blinkTest.bin"))
     .map(_.toLong & 0xFF)
     .grouped(4)
     .map(a => a(0) | (a(1) << 8) | (a(2) << 16) | (a(3) << 24))
-    .toArray
+    .toArray.map(BigInt(_))
+
+  def writeHexSeqToFile(seq: Seq[BigInt], fileName: String): Unit = {
+    val writer = new PrintWriter(new File(fileName))
+    writer.write(seq.map(_.toString(16)).mkString("\n"))
+    writer.close()
+  }
 
   val advancedBlink = Seq(
     0x100002b7L,
@@ -36,15 +47,17 @@ class Top extends Module {
     0x00008067L,
   )
 
-  val rom = SyncROM(simpleBlink.map(_.U(32.W)), simulation = true)
+  val rom = SyncReadMem(256, UInt(32.W))//SyncROM(simpleBlink.map(_.U(32.W)), simulation = true)
+  loadMemoryFromFileInline(rom, "build/prog.txt")
+  writeHexSeqToFile(simpleBlink, "build/prog.txt")
 
-  rom.io.address := pipeline.io.instructionChannel.request.bits.address(31,2)
+  //rom.io.address := pipeline.io.instructionChannel.request.bits.address(31,2)
   pipeline.io.instructionChannel.set(
     _.request.ready := 1.B,
-    _.response.valid := 1.B,
-    _.response.bits.instruction := rom.io.data
+    _.response.valid := RegNext(1.B, 0.B),
+    _.response.bits.instruction := rom.read(pipeline.io.instructionChannel.request.bits.address(31,2))
   )
-  val ram = SyncReadMem(4096, UInt(32.W))
+  val ram = SyncReadMem(1024, UInt(32.W))
   pipeline.io.dataChannel.set(
     _.request.ready := 1.B,
     _.response.set(
@@ -56,7 +69,12 @@ class Top extends Module {
     )
   )
   when(pipeline.io.dataChannel.request.valid && pipeline.io.dataChannel.request.bits.op === MemoryOperation.Write) {
-    ram.write(pipeline.io.dataChannel.request.bits.address(11,0), pipeline.io.dataChannel.request.bits.writeData)
+    when(pipeline.io.dataChannel.request.bits.address(31)) {
+      ram.write(pipeline.io.dataChannel.request.bits.address(11,0), pipeline.io.dataChannel.request.bits.writeData)
+    } otherwise {
+      rom.write(pipeline.io.dataChannel.request.bits.address(11,0), pipeline.io.dataChannel.request.bits.writeData)
+    }
+
   }
 
   val ledReg = RegInit(0.B)
