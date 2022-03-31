@@ -92,3 +92,38 @@ class Top extends Module {
 object TopEmitter extends App {
   emitVerilog(new Top, Array("--target-dir","build"))
 }
+
+object Assem extends App {
+
+  import scala.sys.process._
+
+  val instruction = "beq x0, x1, .+0x234"
+  val writer = new PrintWriter(new File("build/temp.s"))
+  writer.println(instruction)
+  writer.println(Seq.fill(5)("nop").mkString("\n"))
+  writer.close()
+  println(s"riscv64-unknown-elf-as -o build/temp.o build/temp.s -march=rv32i -mabi=ilp32 -mno-relax".!!)
+  println("riscv64-unknown-elf-objcopy -O binary build/temp.o build/temp.bin".!!)
+
+  println(Files.readAllBytes(Paths.get("build/temp.bin"))
+    .map(_.toLong & 0xFF)
+    .grouped(4)
+    .map(a => a(0) | (a(1) << 8) | (a(2) << 16) | (a(3) << 24))
+    .toArray.map(BigInt(_)).mkString("Array(", ", ", ")"))
+
+}
+
+object Bla extends App {
+  import scala.math.log10
+  def log(k: Int)(x: Int) = (log10(x)/log10(k))
+
+  val ks = Seq(2,4,8,16,32,64,128)
+  val ns = Seq(4096,6144,8192,10240,12288,14336,16384)
+
+  ks.foreach { k =>
+    ns.foreach { n =>
+      println(s"$k, $n, ${(2*n*log(k)(n)).toInt}")
+    }
+  }
+
+}
