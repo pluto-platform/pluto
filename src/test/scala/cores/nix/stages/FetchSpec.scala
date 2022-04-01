@@ -7,6 +7,7 @@ import cores.nix.ControlTypes.{LeftOperand, RightOperand}
 import org.scalatest.flatspec.AnyFlatSpec
 import lib.riscv.Assemble
 import lib.BundleExpect._
+import lib.riscv.Assemble.assembleToWords
 
 
 //"beq x0, x1, .+0x234"
@@ -16,7 +17,7 @@ class FetchSpec extends AnyFlatSpec with ChiselScalatestTester {
 
   def testFetch(pc: Long)(instructions: String*)(expects: Fetch => Unit*): TestResult = {
     test(new Fetch) { dut =>
-      Assemble(instructions).foreach { instruction =>
+      assembleToWords(instructions).foreach { instruction =>
         dut.upstream.data.pc.poke(pc.U)
         dut.io.instructionResponse.bits.instruction.poke(instruction.U)
         dut.io.instructionResponse.valid.poke(1.B)
