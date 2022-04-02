@@ -20,7 +20,7 @@ object SdRamController {
     val DeviceDeselect = Value(0xF.U)
   }
 }
-class SdRamController extends MultiIOModule {
+class SdRamController extends Module {
 
   val backend = IO(new DE2_115.SDRAM)
 

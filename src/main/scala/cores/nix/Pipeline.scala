@@ -4,10 +4,11 @@ import chisel3._
 import cores.modules.{ControlAndStatusRegisterFile, IntegerRegisterFile, PipelineControl, PipelineRegister}
 import chisel3.util.{DecoupledIO, ValidIO}
 import cores.lib.ControlTypes.{MemoryAccessResult, MemoryAccessWidth, MemoryOperation}
+import cores.lib.riscv.Opcode
 import cores.nix.stages.{Decode, Execute, Fetch, Memory, WriteBack}
 import cores.nix.stages.Interfaces.{DecodeToExecute, ExecuteToMemory, FetchToDecode, MemoryToWriteBack}
 import lib.Interfaces.Channel
-import lib.util.{BundleItemAssignment, FieldOptionExtractor}
+import lib.util.{BundleItemAssignment, Delay, FieldOptionExtractor}
 
 
 object Pipeline {
@@ -19,6 +20,7 @@ object Pipeline {
   class PipelineSimulationIO extends Bundle {
     val pc = UInt(32.W)
     val registerFile = Vec(32, UInt(32.W))
+    val isEcall = Bool()
   }
 
   object InstructionChannel {
@@ -146,6 +148,7 @@ class Pipeline(state: Option[Pipeline.State] = None) extends Module {
   if(state.isDefined) {
     simulation.get.pc := Components.pc.io.value
     simulation.get.registerFile := Components.registerFile.simulation.get.registers
+    simulation.get.isEcall := Stage.writeBack.io.ecallRetired
   }
 
 

@@ -2,7 +2,7 @@ package cores.nix
 
 import chisel3._
 import chiseltest._
-import cores.lib.ControlTypes.{MemoryAccessResult, MemoryOperation}
+import cores.lib.ControlTypes.{MemoryAccessResult, MemoryAccessWidth, MemoryOperation}
 import cores.nix.Pipeline.State
 import cores.nix.PipelineSpec.Memory
 import lib.riscv.Assemble
@@ -27,20 +27,20 @@ class PipelineSpec extends AnyFlatSpec with ChiselScalatestTester {
 
       val mem = new Memory(dut)(assembleToBytes(instructions).zipWithIndex.map(t => (t._2+pcChange._1.toInt,t._1)) ++ memory)
 
-      instructions.foreach { _ =>
+      while(!dut.simulation.get.isEcall.peek.litToBoolean) {
         mem.step()
         dut.clock.step()
       }
-      (0 until 5).foreach { _ =>
-        mem.step()
-        dut.clock.step()
+
+      regChange.foreach { case (i,(_,v)) =>
+        dut.simulation.get.registerFile(i).expect(v.U)
       }
 
     }
   }
 
   it should "add" in {
-    pipelineTest(Seq("add x1, x2, x3"), Seq())(20L -> 24L)(Map(
+    pipelineTest(Seq("add x1, x2, x3","ecall"), Seq())(20L -> 24L)(Map(
       1 -> (23,45),
       2 -> (19,19),
       3 -> (26,26)
@@ -48,16 +48,44 @@ class PipelineSpec extends AnyFlatSpec with ChiselScalatestTester {
   }
   it should "branch" in {
     pipelineTest(Seq(
-      "top:",
-      "addi x1, x0, 0x18",
-      "addi x2, x0, 0x20",
-      "blt x1, x2, top",
+      "blt x1, x2, exit",
       "li x1, 0x100",
-      "li x2, 0x200"
-    ), Seq())(20L -> 24L)(Map(
-      1 -> (23,45),
-      2 -> (19,19),
-      3 -> (26,26)
+      "li x2, 0x200",
+      "exit: ecall"
+    ), Seq())(20L -> 32L)(Map(
+      1 -> (23,23),
+      2 -> (24,24)
+    ))
+  }
+  it should "not branch" in {
+    pipelineTest(Seq(
+      "blt x1, x2, exit",
+      "li x1, 0x100",
+      "li x2, 0x200",
+      "exit: ecall"
+    ), Seq())(20L -> 32L)(Map(
+      1 -> (25,0x100),
+      2 -> (24,0x200)
+    ))
+  }
+
+  it should "jump and link" in {
+    pipelineTest(Seq(
+      "jal x1, fun",
+      "add x4, x2, x3",
+      "ecall",
+      "nop",
+      "nop",
+      "fun:",
+      "li x2, 30",
+      "jalr x5, 0(x1)",
+      "li x2, 0"
+    ), Seq())(16L -> 24L)(Map(
+      1 -> (0, 20),
+      2 -> (10,30),
+      3 -> (50,50),
+      4 -> (0, 80),
+      5 -> (0,44)
     ))
   }
 
@@ -107,7 +135,7 @@ object PipelineSpec {
         }
         dut.io.dataChannel.response.bits.readData.poke(readData.U)
       }
-      dataRequestPipe = dut.io.dataChannel.request.valid.peek.litToBoolean && (dut.io.dataChannel.request.bits.op.peek.litValue == 0)
+      dataRequestPipe = dut.io.dataChannel.request.valid.peek.litToBoolean && (dut.io.dataChannel.request.bits.op == MemoryOperation.Read)
       dataReadWidth = dut.io.dataChannel.request.bits.accessWidth.peek.litValue.toInt
       dataReadPipe = dut.io.dataChannel.request.bits.address.peek.litValue.toInt
 
@@ -115,7 +143,7 @@ object PipelineSpec {
         writeSuccesPipe = true
         val addr = dut.io.dataChannel.request.bits.address.peek.litValue.toInt
         val wrData = dut.io.dataChannel.request.bits.writeData.peek.litValue.toLong
-        val width = dut.io.dataChannel.request.bits.accessWidth.peek.litValue.toInt
+        val width = dut.io.dataChannel.request.bits.accessWidth.litValue.toInt
         mem(addr) = (wrData & 0xFF).toInt
         if(width >= 1) {
           mem(addr + 1) = ((wrData >> 8) & 0xFF).toInt
@@ -125,8 +153,10 @@ object PipelineSpec {
           mem(addr + 3) = ((wrData >> 24) & 0xFF).toInt
         }
       } else writeSuccesPipe = false
-      */
+ */
     }
+
+
 
     def step(n: Int): Unit = for(_ <- 0 until n) step()
 

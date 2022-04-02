@@ -27,15 +27,13 @@ object Interfaces {
       val isLoad = Bool()
       val isStore = Bool()
       val isLui = Bool()
+      val isAuipc = Bool()
       val isImmediate = Bool()
       val isSystem = Bool()
       val isRegister = Bool()
       val aluFunIsAdd = Bool()
       val destinationIsNonZero = Bool()
       val hasRegisterWriteBack = Bool()
-      val writeSourceRegister = UInt(1.W)
-      val leftOperand = LeftOperand()
-      val rightOperand = RightOperand()
       val instructionType = InstructionType()
     }
   }
@@ -45,22 +43,21 @@ object Interfaces {
     val source = Vec(2, UInt(5.W))
     val destination = UInt(5.W)
 
-    val operand = Vec(2, UInt(32.W))
-    val writeValue = UInt(32.W)
+    val registerOperand = Vec(2, UInt(32.W))
+    val immediate = SInt(32.W)
     val csrIndex = UInt(12.W)
-
-    val offset = SInt(32.W)
-
 
     val funct3 = UInt(3.W)
 
     val control = new Bundle {
+      val isEcall = Bool()
       val isLoad = Bool()
       val isBranch = Bool()
       val isJal = Bool()
       val isJalr = Bool()
 
-      val acceptsForwarding = Vec(2, Bool())
+      val leftOperand = LeftOperand()
+      val rightOperand = RightOperand()
 
       val aluFunction = AluFunction()
 
@@ -88,6 +85,7 @@ object Interfaces {
     val target = UInt(32.W)
 
     val control = new Bundle {
+      val isEcall = Bool()
       val isLoad = Bool()
       val memoryOperation = MemoryOperation()
       val withSideEffects = new Bundle {
@@ -111,6 +109,7 @@ object Interfaces {
     }
 
     val control = new Bundle {
+      val isEcall = Bool()
       val isLoad = Bool()
       val withSideEffects = new Bundle {
         val writeRegisterFile = Bool()

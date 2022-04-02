@@ -36,14 +36,7 @@ class Fetch extends PipelineStage(new ToFetch, new FetchToDecode) {
   val isRegister = opcode === Opcode.register
   val destinationIsNoneZero = destination =/= 0.U
 
-  val leftOperand = MuxCase(LeftOperand.Register, Seq(
-    (isAuipc || isJalr || isJal) -> LeftOperand.PC,
-    isLui -> LeftOperand.Zero
-  ))
-  val rightOperand = MuxCase(RightOperand.Immediate, Seq(
-    (isRegister || isBranch) -> RightOperand.Register,
-    (isJalr || isJal) -> RightOperand.Four
-  ))
+
 
   io.registerSources.index := source
 
@@ -63,15 +56,13 @@ class Fetch extends PipelineStage(new ToFetch, new FetchToDecode) {
       _.isLoad := isLoad,
       _.isStore := isStore,
       _.isLui := isLui,
+      _.isAuipc := isAuipc,
       _.isImmediate := isImmediate,
       _.isSystem := isSystem,
       _.isRegister := isRegister,
       _.aluFunIsAdd := !isRegister && !isImmediate,
       _.destinationIsNonZero := destinationIsNoneZero,
       _.hasRegisterWriteBack := (!isStore && !isBranch) && destinationIsNoneZero,
-      _.writeSourceRegister := (!isSystem).asUInt,
-      _.leftOperand := leftOperand,
-      _.rightOperand := rightOperand,
       _.instructionType := InstructionType.fromOpcode(opcode)
     )
   )

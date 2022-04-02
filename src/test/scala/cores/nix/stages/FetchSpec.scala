@@ -51,8 +51,6 @@ class FetchSpec extends AnyFlatSpec with ChiselScalatestTester {
         _.aluFunIsAdd -> 1.B,
         _.destinationIsNonZero -> 1.B,
         _.hasRegisterWriteBack -> 1.B,
-        _.leftOperand -> LeftOperand.Register,
-        _.rightOperand -> RightOperand.Immediate,
         _.instructionType -> InstructionType.I
       ),
       _.io.registerSources.expect(
@@ -85,8 +83,6 @@ class FetchSpec extends AnyFlatSpec with ChiselScalatestTester {
         _.aluFunIsAdd -> 0.B,
         _.destinationIsNonZero -> 1.B,
         _.hasRegisterWriteBack -> 1.B,
-        _.leftOperand -> LeftOperand.Register,
-        _.rightOperand -> RightOperand.Immediate,
         _.instructionType -> InstructionType.I
       ),
       _.io.registerSources.expect(
@@ -110,8 +106,6 @@ class FetchSpec extends AnyFlatSpec with ChiselScalatestTester {
         _.aluFunIsAdd -> 1.B,
         _.destinationIsNonZero -> 1.B,
         _.hasRegisterWriteBack -> 1.B,
-        _.leftOperand -> LeftOperand.PC,
-        _.rightOperand -> RightOperand.Immediate,
         _.instructionType -> InstructionType.U
       ),
     )
@@ -134,9 +128,6 @@ class FetchSpec extends AnyFlatSpec with ChiselScalatestTester {
         _.isRegister -> 0.B,
         _.aluFunIsAdd -> 1.B,
         _.hasRegisterWriteBack -> 0.B,
-        _.leftOperand -> LeftOperand.Register,
-        _.rightOperand -> RightOperand.Immediate,
-        _.writeSourceRegister -> 1.U,
         _.instructionType -> InstructionType.S
       ),
       _.io.registerSources.expect(
@@ -170,8 +161,6 @@ class FetchSpec extends AnyFlatSpec with ChiselScalatestTester {
         _.aluFunIsAdd -> 0.B,
         _.destinationIsNonZero -> 1.B,
         _.hasRegisterWriteBack -> 1.B,
-        _.leftOperand -> LeftOperand.Register,
-        _.rightOperand -> RightOperand.Register,
         _.instructionType -> InstructionType.R
       ),
       _.io.registerSources.expect(
@@ -196,8 +185,6 @@ class FetchSpec extends AnyFlatSpec with ChiselScalatestTester {
         _.aluFunIsAdd -> 1.B,
         _.destinationIsNonZero -> 1.B,
         _.hasRegisterWriteBack -> 1.B,
-        _.leftOperand -> LeftOperand.Zero,
-        _.rightOperand -> RightOperand.Immediate,
         _.instructionType -> InstructionType.U
       ),
     )
@@ -222,8 +209,6 @@ class FetchSpec extends AnyFlatSpec with ChiselScalatestTester {
         _.isRegister -> 0.B,
         _.hasRegisterWriteBack -> 0.B,
         _.instructionType -> InstructionType.B,
-        _.leftOperand -> LeftOperand.Register,
-        _.rightOperand -> RightOperand.Register
       ),
       _.io.registerSources.expect(
         _.index(0) -> 20.U,
@@ -247,8 +232,6 @@ class FetchSpec extends AnyFlatSpec with ChiselScalatestTester {
         _.destinationIsNonZero -> 1.B,
         _.aluFunIsAdd -> 1.B,
         _.hasRegisterWriteBack -> 1.B,
-        _.leftOperand -> LeftOperand.PC,
-        _.rightOperand -> RightOperand.Four,
         _.instructionType -> InstructionType.J
       ),
     )
@@ -269,8 +252,6 @@ class FetchSpec extends AnyFlatSpec with ChiselScalatestTester {
         _.aluFunIsAdd -> 1.B,
         _.destinationIsNonZero -> 1.B,
         _.hasRegisterWriteBack -> 1.B,
-        _.leftOperand -> LeftOperand.PC,
-        _.rightOperand -> RightOperand.Four,
         _.instructionType -> InstructionType.I
       ),
       _.io.registerSources.expect(
@@ -297,7 +278,6 @@ class FetchSpec extends AnyFlatSpec with ChiselScalatestTester {
         _.isSystem -> 1.B,
         _.isRegister -> 0.B,
         _.destinationIsNonZero -> 1.B,
-        _.writeSourceRegister -> 0.U,
         _.hasRegisterWriteBack -> 1.B,
         _.instructionType -> InstructionType.I
       ),

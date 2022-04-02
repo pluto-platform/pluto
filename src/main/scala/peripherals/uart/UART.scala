@@ -7,7 +7,6 @@ import peripherals.uart.UartReceiver.State
 
 object UART {
   object Baud {
-    9600
   }
 }
 

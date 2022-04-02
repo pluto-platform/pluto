@@ -65,6 +65,7 @@ class Memory extends PipelineStage(new ExecuteToMemory, new MemoryToWriteBack) {
     _.registerWriteBack.value := Mux(upstream.data.control.withSideEffects.isCsrWrite, io.csrResponse.value, upstream.data.aluResult),
     _.registerWriteBack.index := upstream.data.destination,
     _.control.set(
+      _.isEcall := upstream.data.control.isEcall,
       _.isLoad := upstream.data.control.isLoad,
       _.withSideEffects.set(
         _.writeCsrFile := upstream.data.control.withSideEffects.isCsrWrite,
@@ -74,6 +75,7 @@ class Memory extends PipelineStage(new ExecuteToMemory, new MemoryToWriteBack) {
   )
 
   when(memNotReady) {
+    downstream.data.control.isEcall := 0.B
     downstream.data.control.withSideEffects.set(
       _.writeCsrFile := 0.B,
       _.writeRegisterFile := 0.B

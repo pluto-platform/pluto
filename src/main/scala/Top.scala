@@ -4,6 +4,7 @@ import chisel3.util.experimental.loadMemoryFromFileInline
 import firrtl.annotations.MemorySynthInit
 import lib.util.BundleItemAssignment
 import cores.lib.ControlTypes.{MemoryAccessResult, MemoryOperation}
+import peripherals.uart.{UartReceiver, UartTransmitter}
 
 import java.io.{File, PrintWriter}
 import java.nio.file.{Files, Paths}
@@ -11,6 +12,8 @@ import java.nio.file.{Files, Paths}
 class Top extends Module {
   val io = IO(new Bundle {
     val led = Output(Bool())
+    val rx = Input(Bool())
+    val tx = Output(Bool())
   })
   val pipeline = Module(new cores.nix.Pipeline)
 
@@ -18,7 +21,7 @@ class Top extends Module {
     override def toFirrtl = MemorySynthInit
   })
 
-  val simpleBlink = Files.readAllBytes(Paths.get("asm/blinkTest.bin"))
+  val simpleBlink = Files.readAllBytes(Paths.get("asm/blink.bin"))
     .map(_.toLong & 0xFF)
     .grouped(4)
     .map(a => a(0) | (a(1) << 8) | (a(2) << 16) | (a(3) << 24))
@@ -47,8 +50,17 @@ class Top extends Module {
     0x00008067L,
   )
 
+  val receiver = Module(new UartReceiver(10417))
+  receiver.io.rx := io.rx
+  val transmitter = Module(new UartTransmitter(10417))
+  transmitter.io.set(
+    _.send.valid := 0.B,
+    _.send.bits := 0.U,
+  )
+  io.tx := transmitter.io.tx
+
   val rom = SyncReadMem(256, UInt(32.W))//SyncROM(simpleBlink.map(_.U(32.W)), simulation = true)
-  loadMemoryFromFileInline(rom, "build/prog.txt")
+  loadMemoryFromFileInline(rom, "prog.txt")
   writeHexSeqToFile(simpleBlink, "build/prog.txt")
 
   //rom.io.address := pipeline.io.instructionChannel.request.bits.address(31,2)
@@ -83,6 +95,12 @@ class Top extends Module {
     && pipeline.io.dataChannel.request.bits.op === MemoryOperation.Write
     && pipeline.io.dataChannel.request.bits.address === 0x10000000L.U) {
     ledReg := pipeline.io.dataChannel.request.bits.writeData(0)
+  }
+  when(pipeline.io.dataChannel.request.valid
+    && pipeline.io.dataChannel.request.bits.op === MemoryOperation.Write
+    && pipeline.io.dataChannel.request.bits.address === 0x20000000L.U) {
+    transmitter.io.send.valid := 1.B
+    transmitter.io.send.bits := pipeline.io.dataChannel.request.bits.writeData(7,0)
   }
 
   io.led := ledReg

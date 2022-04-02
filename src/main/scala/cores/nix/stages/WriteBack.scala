@@ -20,6 +20,7 @@ class WriteBack extends PipelineStage(new MemoryToWriteBack, new Bundle {}) {
     val dataResponse = Flipped(new DataChannel.Response)
     val exception = Output(new Exception.ExceptionBundle)
     val instructionRetired = Output(Bool())
+    val ecallRetired = Output(Bool())
   })
 
   val writeBackValue = Mux(upstream.data.control.isLoad, io.dataResponse.bits.readData, upstream.data.registerWriteBack.value)
@@ -52,11 +53,11 @@ class WriteBack extends PipelineStage(new MemoryToWriteBack, new Bundle {}) {
   io.forwarding.set(
     _.destination := upstream.data.registerWriteBack.index,
     _.canForward := upstream.data.control.withSideEffects.writeRegisterFile,
-    _.value := upstream.data.registerWriteBack.value // TODO: add additional stall
+    _.value := upstream.data.registerWriteBack.value
   )
 
   io.instructionRetired := !(upstream.data.control.isLoad && !io.dataResponse.valid)
-
+  io.ecallRetired := upstream.data.control.isEcall
 
 }
 object Emitter extends App {
