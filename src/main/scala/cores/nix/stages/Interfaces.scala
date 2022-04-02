@@ -31,7 +31,6 @@ object Interfaces {
       val isImmediate = Bool()
       val isSystem = Bool()
       val isRegister = Bool()
-      val aluFunIsAdd = Bool()
       val destinationIsNonZero = Bool()
       val hasRegisterWriteBack = Bool()
       val instructionType = InstructionType()

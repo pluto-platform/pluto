@@ -25,7 +25,7 @@ class Top extends Module {
     .map(_.toLong & 0xFF)
     .grouped(4)
     .map(a => a(0) | (a(1) << 8) | (a(2) << 16) | (a(3) << 24))
-    .toArray.map(BigInt(_))
+    .toArray.map(BigInt(_)) ++ Seq.fill(10)(BigInt(0))
 
   def writeHexSeqToFile(seq: Seq[BigInt], fileName: String): Unit = {
     val writer = new PrintWriter(new File(fileName))

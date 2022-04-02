@@ -60,7 +60,6 @@ class Fetch extends PipelineStage(new ToFetch, new FetchToDecode) {
       _.isImmediate := isImmediate,
       _.isSystem := isSystem,
       _.isRegister := isRegister,
-      _.aluFunIsAdd := !isRegister && !isImmediate,
       _.destinationIsNonZero := destinationIsNoneZero,
       _.hasRegisterWriteBack := (!isStore && !isBranch) && destinationIsNoneZero,
       _.instructionType := InstructionType.fromOpcode(opcode)

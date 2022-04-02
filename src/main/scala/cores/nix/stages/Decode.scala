@@ -94,6 +94,10 @@ class Decode extends PipelineStage(new FetchToDecode, new DecodeToExecute) {
 
   when(downstream.flowControl.flush || io.hazardDetection.hazard) {
     downstream.data.control.isEcall := 0.B
+    downstream.data.control.isLoad := 0.B
+    downstream.data.control.isBranch := 0.B
+    downstream.data.control.isJal := 0.B
+    downstream.data.control.isJalr := 0.B
     downstream.data.control.withSideEffects.set(
       _.hasMemoryAccess := 0.B,
       _.isCsrRead := 0.B,
