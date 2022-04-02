@@ -13,8 +13,7 @@ object Assemble {
     val writer = new PrintWriter(new File("build/temp.s"))
     writer.println(instructions.mkString("\n"))
     writer.close()
-
-    println(s"riscv64-unknown-elf-as -o build/temp.o build/temp.s -march=rv32i -mabi=ilp32".!!)
+    println("riscv64-unknown-elf-as -o build/temp.o build/temp.s -march=rv32i -mabi=ilp32".!!)
     println("riscv64-unknown-elf-objcopy -O binary build/temp.o build/temp.bin".!!)
 
     Files.readAllBytes(Paths.get("build/temp.bin"))

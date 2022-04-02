@@ -90,6 +90,14 @@ class Execute extends PipelineStage(new DecodeToExecute, new ExecuteToMemory) {
     _.flush := downstream.flowControl.flush
   )
 
+  when(downstream.flowControl.flush) {
+    downstream.data.control.withSideEffects.set(
+      _.hasRegisterWriteBack := 0.B,
+      _.hasMemoryAccess := 0.B,
+      _.isCsrWrite := 0.B
+    )
+  }
+
 
 }
 
