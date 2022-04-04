@@ -53,7 +53,7 @@ class WriteBack extends PipelineStage(new MemoryToWriteBack, new Bundle {}) {
   io.forwarding.set(
     _.destination := upstream.data.registerWriteBack.index,
     _.canForward := upstream.data.control.withSideEffects.writeRegisterFile,
-    _.value := upstream.data.registerWriteBack.value
+    _.value := writeBackValue
   )
 
   io.instructionRetired := !(upstream.data.control.isLoad && !io.dataResponse.valid)

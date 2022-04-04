@@ -110,6 +110,7 @@ class Execute extends PipelineStage(new DecodeToExecute, new ExecuteToMemory) {
   when(downstream.flowControl.flush) {
     downstream.data.control.isEcall := 0.B
     downstream.data.control.isLoad := 0.B
+    downstream.data.jump := 0.B
     downstream.data.control.withSideEffects.set(
       _.hasRegisterWriteBack := 0.B,
       _.hasMemoryAccess := 0.B,
