@@ -76,12 +76,14 @@ class ControlAndStatusRegisterFile extends Module {
     0x320.U -> counterInhibitReg.instructionsRetired ## 0.B ## counterInhibitReg.cycle, // mcounterinhibit: machine counter-inhibit register
     0x340.U -> scratchRegister, // mscratch: scratch register for machine trap handlers
     0x341.U -> exceptionPc, // mepc: machine exception program counter
-    0x342.U -> exceptionValue, // mtval: machine bad address or instruction
+    0x342.U -> exceptionCause.asUInt, // mcause: machine trap cause
+    0x343.U -> exceptionValue, // mtval: machine bad address or instruction
+    0x344.U -> interruptPendingReg.custom.asUInt ## 0.U(4.W) ## interruptPendingReg.external ## 0.U(3.W) ## interruptPendingReg.timer ## 0.U(3.W) ## interruptPendingReg.software ## 0.U(3.W), // mip: machine interrupt pending
     0xB00.U -> cycleCounter(31,0), // mcycle: machine cycle counter
     0xB02.U -> instructionRetiredCounter(31,0), // minstret: machine instructions-retired counter
     0xB80.U -> cycleCounter(63,32), // mcycleh: upper 32 bits of mcycle
     0xB82.U -> instructionRetiredCounter(63,32), // minstreth: upper 32 bits of minstret
-  )))
+  )), 0.U)
 
   val writeValue = io.writeRequest.bits.value
   when(io.writeRequest.valid) {
@@ -101,7 +103,7 @@ class ControlAndStatusRegisterFile extends Module {
         trapModeReg := Mux(writeValue(0), TrapMode.Vectored, TrapMode.Direct)
         trapAddressReg := writeValue(31,2)
       }
-      is(306.U) {
+      is(0x306.U) {
         counterEnableReg.set(
           _.cycle := writeValue(0),
           _.timer := writeValue(1),
@@ -121,7 +123,18 @@ class ControlAndStatusRegisterFile extends Module {
         exceptionPc := writeValue
       }
       is(0x342.U) {
+        exceptionCause := Exception.Cause.safe(writeValue)._1
+      }
+      is(0x343.U) {
         exceptionValue := writeValue
+      }
+      is(0x344.U) {
+        interruptPendingReg.set(
+          _.custom := writeValue(31,16).asBools,
+          _.external := writeValue(11),
+          _.timer := writeValue(7),
+          _.software := writeValue(3)
+        )
       }
       is(0xB00.U) {
         cycleCounter := cycleCounter(63,32) ## writeValue
