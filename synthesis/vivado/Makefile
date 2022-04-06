@@ -20,11 +20,11 @@ $(PROJECT).bit: $(SRCS) pinout.xdc $(PROJECT_FILES)
 
 download: $(PROJECT).bit
 	vivado -mode batch -source config.tcl
+#add_files [ glob ../../build/prog.txt]\n\
 
 synth.tcl:
 	echo "\
 read_verilog [ glob $(SRCS) ]\n\
-add_files [ glob ../../build/prog.txt]\n\
 read_xdc ./pinout.xdc\nsynth_design -top $(TOP_LEVEL) -part $(PART)\n\
 opt_design\n\
 place_design\n\

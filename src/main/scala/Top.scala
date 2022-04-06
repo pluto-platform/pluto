@@ -12,6 +12,7 @@ import java.nio.file.{Files, Paths}
 class Top extends Module {
   val io = IO(new Bundle {
     val led = Output(Bool())
+    val pc = Output(UInt(10.W))
     val rx = Input(Bool())
     val tx = Output(Bool())
   })
@@ -21,7 +22,7 @@ class Top extends Module {
     override def toFirrtl = MemorySynthInit
   })
 
-  val simpleBlink = Files.readAllBytes(Paths.get("../pluto-rt/rust.bin"))
+  val simpleBlink = Files.readAllBytes(Paths.get("asm/blink.bin"))
     .map(_.toLong & 0xFF)
     .grouped(4)
     .map(a => a(0) | (a(1) << 8) | (a(2) << 16) | (a(3) << 24))
@@ -42,38 +43,44 @@ class Top extends Module {
   )
   io.tx := transmitter.io.tx
 
-  val rom = SyncReadMem(2048, UInt(32.W))
+  val rom = VecInit(simpleBlink.map(_.U)).apply(RegNext(pipeline.io.instructionChannel.request.bits.address(31,2), 0.U))
+  /*
+  SyncReadMem(2048, UInt(32.W))
   loadMemoryFromFileInline(rom, "prog.txt")
   writeHexSeqToFile(simpleBlink, "build/prog.txt")
+
+   */
   pipeline.io.instructionChannel.set(
     _.request.ready := 1.B,
     _.response.valid := RegNext(pipeline.io.instructionChannel.request.valid, 0.B),
-    _.response.bits.instruction := rom.read(pipeline.io.instructionChannel.request.bits.address(31,2))
+    _.response.bits.instruction := rom
   )
 
 
   val ram = SyncReadMem(1024, UInt(32.W))
   val ledReg = RegInit(0.B)
   io.led := ledReg
+  io.pc := pipeline.io.pc
 
   pipeline.io.dataChannel.request.ready := 1.B
   pipeline.io.dataChannel.response.set(
     _.valid := 1.B,
     _.bits.result := MemoryAccessResult.Success,
-    _.bits.readData := DontCare
+    _.bits.readData := 0.U
   )
 
   val readRequest = pipeline.io.dataChannel.request.valid && pipeline.io.dataChannel.request.bits.op === MemoryOperation.Read
   val address = pipeline.io.dataChannel.request.bits.address
-  val ramRead = ram.read(address(31,2))
+  val ramRead = ram.read(address(12,2))
   //val romRead = rom.read(address(31,2))
-  when(readRequest) {
+  when(RegNext(readRequest, 0.B)) {
     val rdData = WireDefault(0.U)
-    when(0x80000000L.U <= address && address < (0x80000000L+1024).U) {
+    val addrPipe = RegNext(address, 0.U)
+    when(0x80000000L.U <= addrPipe && addrPipe < (0x80000000L+1024).U) {
       rdData := ramRead
-    }.elsewhen(address === 0x10000.U) {
+    }.elsewhen(addrPipe === 0x10000.U) {
       rdData := ledReg.asUInt
-    }.elsewhen(address === 0x20000.U) {
+    }.elsewhen(addrPipe === 0x20000.U) {
       rdData := receiver.io.received
     }
     pipeline.io.dataChannel.response.bits.readData := rdData
@@ -84,9 +91,7 @@ class Top extends Module {
 
     val address = pipeline.io.dataChannel.request.bits.address
     val wrData = pipeline.io.dataChannel.request.bits.writeData
-    when(address < 2048.U) {
-      //rom.write(address(31,2), wrData)
-    }.elsewhen(0x80000000L.U <= address && address < (0x80000000L+1024).U) {
+    when(0x80000000L.U <= address && address < (0x80000000L+1024).U) {
       ram.write(address(31,2), wrData)
     }.elsewhen(address === 0x10000.U) {
       ledReg := wrData(0)

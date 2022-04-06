@@ -74,7 +74,7 @@ class Memory extends PipelineStage(new ExecuteToMemory, new MemoryToWriteBack) {
     )
   )
 
-  when(memNotReady) {
+  when(memNotReady || downstream.flowControl.flush) {
     downstream.data.control.isEcall := 0.B
     downstream.data.control.withSideEffects.set(
       _.writeCsrFile := 0.B,

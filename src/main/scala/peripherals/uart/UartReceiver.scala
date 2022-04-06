@@ -28,7 +28,7 @@ class UartReceiver(val pv: Int) extends Module {
 
   val halfPeriodTick = (periodReg >> 1).asUInt === counterReg
   val periodTick = periodReg === counterReg
-  val rxFallingEdge = RegNext(RegNext(io.rx)) && ! io.rx
+  val rxFallingEdge = RegNext(RegNext(io.rx, 0.B), 0.B) && ! io.rx
 
   val shiftReg = RegInit(0.U(8.W))
   io.received := shiftReg

@@ -16,6 +16,7 @@ object Pipeline {
   class PipelineIO extends Bundle {
     val instructionChannel = new InstructionChannel
     val dataChannel = new DataChannel
+    val pc = Output(UInt(32.W))
   }
   class PipelineSimulationIO extends Bundle {
     val pc = UInt(32.W)
@@ -91,6 +92,8 @@ class Pipeline(state: Option[Pipeline.State] = None) extends Module {
     val csrFile = Module(new ControlAndStatusRegisterFile)
     val exceptionUnit = Module(new ExceptionUnit)
   }
+
+  io.pc := Components.pc.io.value
 
   Stage.fetch
     .attachRegister(StageReg.fetch)
