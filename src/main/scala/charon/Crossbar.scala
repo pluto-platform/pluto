@@ -3,35 +3,38 @@ package charon
 import chisel3._
 
 
+
+
+
+
 object Crossbar {
 
-  def apply(managers: Tilelink.Interface.Manager*)(clients: Tilelink.Interface.Client*)(addressMap: AddressMap)(implicit params: Tilelink.LinkParameters): Crossbar = {
+  def apply(requesters: Tilelink.Agent.Interface.Requester*)(responders: Tilelink.Agent.Interface.Responder*)(addressMap: AddressMap)(implicit params: Tilelink.Parameters): Crossbar = {
 
-    val c = Module(new Crossbar(managers.length, clients.length)(addressMap))
-    c.io.managers.zip(managers).foreach { case (port,signal) => port := signal }
-    c.io.clients.zip(clients).foreach { case (port,signal) => port := signal }
+    val c = Module(new Crossbar(requesters.length, responders.length)(addressMap))
+    c.io.requesters.zip(requesters).foreach { case (port,signal) => port := signal }
+    c.io.responders.zip(responders).foreach { case (port,signal) => port := signal }
 
     c
   }
 }
 
-class Crossbar(n: Int, m: Int)(addressMap: AddressMap)(implicit params: Tilelink.LinkParameters) extends Module {
+class Crossbar(n: Int, m: Int)(addressMap: AddressMap)(implicit params: Tilelink.Parameters) extends Module with Tilelink.Agent {
 
   val io = IO(new Bundle {
-    val managers = Vec(n, Flipped(new Tilelink.Interface.Manager))
-    val clients = Vec(m, Flipped(new Tilelink.Interface.Client))
+    val requesters = Vec(n, Flipped(new Tilelink.Agent.Interface.Requester))
+    val responders = Vec(m, Flipped(new Tilelink.Agent.Interface.Responder))
   })
 
+  io.responders.foreach { responder =>
 
-  io.clients.foreach { client =>
-
-    client.a <> ChannelMux(io.managers.map(_.a), addressMap.map(client))
+    responder.a <> ChannelMux(io.requesters.map(_.a), addressMap.map(responder))
 
   }
 
-  io.managers.zipWithIndex.foreach { case (manager, i) =>
+  io.requesters.zipWithIndex.foreach { case (requester, i) =>
 
-    manager.d <> ChannelMux(io.clients.map(_.d), i.U)
+    requester.d <> ChannelMux(io.responders.map(_.d), i.U)
 
   }
 

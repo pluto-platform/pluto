@@ -18,7 +18,7 @@ object Tilelink {
 
   // (address & (2^size -1) == 0) always holds
 
-  case class LinkParameters(
+  case class Parameters(
                               w: Int, // Width of the data bus in bytes
                               a: Int, // Width of each address field in bits
                               z: Int, // Width of each size field in bits
@@ -30,7 +30,7 @@ object Tilelink {
 
   }
   object Channel {
-    class A(implicit params: Tilelink.LinkParameters) extends Channel {
+    class A(implicit params: Tilelink.Parameters) extends Channel {
       import params._
       val opcode = Tilelink.Operation()
       val param = UInt(3.W)
@@ -49,7 +49,7 @@ object Tilelink {
       }
     }
 
-    class D(implicit params: Tilelink.LinkParameters) extends Channel {
+    class D(implicit params: Tilelink.Parameters) extends Channel {
       import params._
       val opcode = Tilelink.Response()
       val param = UInt(2.W)
@@ -72,15 +72,34 @@ object Tilelink {
   abstract class Interface extends Bundle {
 
   }
-  object Interface {
-    class Manager(implicit params: Tilelink.LinkParameters) extends Interface {
-      val a = new Channel.A
-      val d = Flipped(new Channel.D)
+  object Agent {
+    object Interface {
+      class Requester(implicit params: Tilelink.Parameters) extends Interface {
+        val a = new Channel.A
+        val d = Flipped(new Channel.D)
+      }
+      class Responder(val size: Int = 0)(implicit params: Tilelink.Parameters) extends Interface {
+        val a = Flipped(new Channel.A)
+        val d = new Channel.D
+      }
     }
-    class Client(implicit params: Tilelink.LinkParameters) extends Interface {
-      val a = Flipped(new Channel.A)
-      val d = new Channel.D
-    }
+  }
+
+
+
+  trait Agent {
+
+    val io: Bundle
+
+    val requesterInterfaces = io.elements.collect {
+      case (_, req: Agent.Interface.Requester) => req
+      case (_, reqVec: Vec[Agent.Interface.Requester]) => reqVec
+    }.toSeq
+    val responderInterfaces = io.elements.collect {
+      case (_, res: Agent.Interface.Responder) => res
+      case (_, resVec: Vec[Agent.Interface.Responder]) => resVec
+    }.toSeq
+
   }
 
 

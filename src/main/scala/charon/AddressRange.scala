@@ -5,7 +5,7 @@ import chisel3._
 object AddressMap {
 
 }
-case class AddressMap(map: Map[Tilelink.Interface.Client,AddressRange]) {
+case class AddressMap(map: Map[Tilelink.Interface.Responder,AddressRange]) {
 
 }
 
