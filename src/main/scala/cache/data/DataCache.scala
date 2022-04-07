@@ -1,4 +1,4 @@
-package cores.modules.cache.data
+package cache.data
 
 import lib.Types._
 import chisel3._

@@ -1,7 +1,7 @@
 package lib
 
 import chisel3._
-import lib.util.SeqToTransposable
+
 
 import scala.language.implicitConversions
 
@@ -17,9 +17,23 @@ object util {
   }
   implicit class BoolVec(x: Seq[Bool]) {
     def orR: Bool = x.reduceTree(_ || _)
+    def rotatedLeft: Seq[Bool] = x.tail :+ x.head
   }
   implicit class SeqToVecMethods[T <: Data](x: Seq[T]) {
     def toVec: Vec[T] = VecInit(x)
+  }
+  implicit class DataReducer[T <: Data](x: Seq[T]) {
+    class Pair extends Bundle { val sel = Bool(); val data = chiselTypeOf(x.head) }
+    def reduceWithOH(oh: Seq[Bool]): T = {
+      x.zip(oh).map { case (data, sel) =>
+        val w = Wire(new Pair)
+        w.sel := sel
+        w.data := data
+        w
+      }.toVec.reduceTree { (l,r) =>
+        Mux(l.sel, l, r)
+      }.data
+    }
   }
   implicit class SeqToTransposable[T](x: Seq[Seq[T]]) {
     def T: Seq[Seq[T]] = Seq.tabulate(x.head.length)(i => x.map(_(i)))

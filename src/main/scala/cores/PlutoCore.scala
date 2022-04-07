@@ -1,9 +1,9 @@
 package cores
 
+import cache.data.DataCache
+import cache.instruction.InstructionCache
 import chisel3._
 import cores.modules.branchpredictor.{BranchPredictor, LoopBranchPredictor}
-import cores.modules.cache.data.DataCache
-import cores.modules.cache.instruction.InstructionCache
 
 object PlutoCore {
 
