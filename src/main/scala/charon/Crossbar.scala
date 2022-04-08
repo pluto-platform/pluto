@@ -19,7 +19,7 @@ object Crossbar {
   }
 }
 
-class Crossbar(n: Int, m: Int)(addressMap: AddressMap)(implicit params: Tilelink.Parameters) extends Module with Tilelink.Agent {
+class Crossbar(n: Int, m: Int)(addressMap: AddressMap)(implicit params: Tilelink.Parameters) extends Module {
 
   val io = IO(new Bundle {
     val requesters = Vec(n, Flipped(new Tilelink.Agent.Interface.Requester))

@@ -22,7 +22,7 @@ class Top extends Module {
     override def toFirrtl = MemorySynthInit
   })
 
-  val simpleBlink = Files.readAllBytes(Paths.get("asm/blink.bin"))
+  val simpleBlink = Files.readAllBytes(Paths.get("../pluto-rt/rust.bin"))
     .map(_.toLong & 0xFF)
     .grouped(4)
     .map(a => a(0) | (a(1) << 8) | (a(2) << 16) | (a(3) << 24))
@@ -34,9 +34,9 @@ class Top extends Module {
     writer.close()
   }
 
-  val receiver = Module(new UartReceiver(868))
+  val receiver = Module(new UartReceiver(434))
   receiver.io.rx := io.rx
-  val transmitter = Module(new UartTransmitter(868))
+  val transmitter = Module(new UartTransmitter(434))
   transmitter.io.set(
     _.send.valid := 0.B,
     _.send.bits := DontCare,
@@ -76,12 +76,14 @@ class Top extends Module {
   when(RegNext(readRequest, 0.B)) {
     val rdData = WireDefault(0.U)
     val addrPipe = RegNext(address, 0.U)
-    when(0x80000000L.U <= addrPipe && addrPipe < (0x80000000L+1024).U) {
+    when(addrPipe <= simpleBlink.length.U) {
+      rdData := VecInit(simpleBlink.map(_.U)).apply(addrPipe)
+    }.elsewhen(0x80000000L.U <= addrPipe && addrPipe < (0x80000000L+1024).U) {
       rdData := ramRead
     }.elsewhen(addrPipe === 0x10000.U) {
       rdData := ledReg.asUInt
     }.elsewhen(addrPipe === 0x20000.U) {
-      rdData := receiver.io.received
+      rdData := transmitter.io.send.ready.asUInt
     }
     pipeline.io.dataChannel.response.bits.readData := rdData
   }

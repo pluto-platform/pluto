@@ -2,6 +2,7 @@ package cores.modules
 
 import chisel3._
 import chisel3.util.Valid
+import firrtl.FirrtlProtos.Firrtl.Statement.ReadUnderWrite
 
 object IntegerRegisterFile {
 
@@ -60,7 +61,10 @@ class IntegerRegisterFile(init: Option[Seq[BigInt]] = None) extends Module {
 
       // handle both read requests
       io.source.request.index.zip(io.source.response.data).foreach { case (address, data) =>
-        data := memory.read(address)
+        data := Mux(
+          RegNext(address === io.write.bits.index && io.write.valid, 0.B),
+          RegNext(io.write.bits.data, 0.U),
+          memory.read(address))
       }
 
       // handle write request

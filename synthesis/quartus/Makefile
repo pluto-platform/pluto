@@ -30,7 +30,7 @@ sta: $(PROJECT).sta.rpt
 
 STAMP = echo $(shell date --iso=seconds) >
 
-$(PROJECT).map.rpt: $(SOURCE_FILES) pinout.tcl
+$(PROJECT).map.rpt: $(SRCS) pinout.tcl
 	quartus_map --64bit --read_settings_files=on $(addprefix --source=,$(SRCS)) $(PROJECT)
 	$(STAMP) fit.chg
 
@@ -57,6 +57,8 @@ sta.chg:
 	$(STAMP) sta.chg
 asm.chg:
 	$(STAMP) asm.chg
+
+$(PROJECT).sof: $(PROJECT).asm.rpt
 
 program: $(PROJECT).sof
 	killall jtagd || true
