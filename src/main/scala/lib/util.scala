@@ -17,7 +17,7 @@ object util {
   }
   implicit class BoolVec(x: Seq[Bool]) {
     def orR: Bool = x.reduceTree(_ || _)
-    def rotatedLeft: Seq[Bool] = x.tail :+ x.head
+    def rotatedLeft: Seq[Bool] = x.last +: x.reverse.tail.reverse
   }
   implicit class SeqToVecMethods[T <: Data](x: Seq[T]) {
     def toVec: Vec[T] = VecInit(x)

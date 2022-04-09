@@ -17,12 +17,12 @@ object Cache {
     require(isPow2(blockSize),s"Cache block size needs to a power of two but was $blockSize")
 
     val lines = size / blockSize
-    val wordsPerBlock = blockSize / 4
+    val wordsPerLine = blockSize / 4
 
     object Widths {
       val address = log2Ceil(coverage.length)
       val byteOffest = 2
-      val blockOffset = log2Ceil(wordsPerBlock)
+      val blockOffset = log2Ceil(wordsPerLine)
       val index = log2Ceil(size / blockSize)
       val tag = 32 - index - blockOffset - byteOffest
     }

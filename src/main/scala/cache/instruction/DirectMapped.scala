@@ -18,30 +18,31 @@ object DirectMapped {
 
 class DirectMapped(dim: Cache.Dimension) extends InstructionCache(dim) {
   implicit val d = dim
-  import dim.{lines, blockSize, wordsPerBlock, Widths}
+  import dim.{lines, blockSize, wordsPerLine, Widths}
 
-  val blocks = SyncReadMem(lines, Vec(wordsPerBlock, Word()))
+  val blocks = SyncReadMem(lines, Vec(wordsPerLine, Word()))
   val metas = SyncReadMem(lines, LineInfo())
 
   val stateReg = RegInit(State.Hit)
 
-  val wordSelectorReg = RegEnable( // register a one-hot version of the block offset if cache is operating normally
-    UIntToOH(io.request.address.getBlockOffset, Widths.blockOffset).asBools.toVec,
-    Seq.fill(Widths.blockOffset)(0.B).toVec,
-    stateReg === State.Hit
-  )
-  val addressReg = RegEnable(
-    io.request.address,
-    0.U,
-    stateReg === State.Hit
-  )
-  val index = Mux(stateReg === State.Hit, io.request.address.getIndex, addressReg.getIndex)
 
-  val fillPointerReg = RegInit(Seq.fill(wordsPerBlock)(0.B).toVec)
+  val addressReg = RegInit(0.U(Widths.address.W))
+  val index = Mux(stateReg === State.Hit, io.request.address.getIndex, addressReg.getIndex)
+  val fillPointerReg = RegInit((1.B +: Seq.fill(wordsPerLine - 1)(0.B)).toVec)
+  val requestPipe = RegNext(io.request.valid, 0.B)
+
+  val meta = metas.read(index)
+  val hit = (meta.tag === addressReg.getTag && meta.valid)
+  when(stateReg === State.Hit && (hit || !requestPipe)) { addressReg := io.request.address }
+
+  val wordSelectorReg = RegEnable( // register a one-hot version of the block offset if cache is operating normally
+    UIntToOH(io.request.address.getBlockOffset, wordsPerLine).asBools.toVec,
+    Seq.fill(wordsPerLine)(0.B).toVec,
+    stateReg === State.Hit && hit
+  )
 
   io.response.instruction := blocks.read(index).reduceWithOH(wordSelectorReg)
-  val meta = metas.read(index)
-  val hit = meta.tag === addressReg.getTag && meta.valid
+
 
   io.fillPort.address := addressReg
   io.fillPort.length := blockSize.U
@@ -52,9 +53,9 @@ class DirectMapped(dim: Cache.Dimension) extends InstructionCache(dim) {
 
   switch(stateReg) {
     is(State.Hit) {
-      stateReg := Mux(hit, State.Hit, State.Miss)
-      io.request.ready := hit
-      io.response.valid := 1.B
+      stateReg := Mux(!hit && requestPipe, State.Miss, State.Hit)
+      io.request.ready := requestPipe && hit
+      io.response.valid := requestPipe && hit
     }
     is(State.Miss) {
       stateReg := State.Fill
@@ -63,7 +64,6 @@ class DirectMapped(dim: Cache.Dimension) extends InstructionCache(dim) {
 
       metas.write(addressReg.getIndex, LineInfo(1.B, addressReg.getTag))
 
-      fillPointerReg := (1.B +: Seq.fill(wordsPerBlock - 1)(0.B)).toVec
     }
     is(State.Fill) {
       stateReg := State.Fill
@@ -78,7 +78,7 @@ class DirectMapped(dim: Cache.Dimension) extends InstructionCache(dim) {
         fillPointerReg := fillPointerReg.rotatedLeft
         blocks.write(
           addressReg.getIndex,
-          Seq.fill(wordsPerBlock)(io.fillPort.data).toVec,
+          Seq.fill(wordsPerLine)(io.fillPort.data).toVec,
           fillPointerReg
         )
 
