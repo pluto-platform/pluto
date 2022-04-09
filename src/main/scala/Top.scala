@@ -78,7 +78,7 @@ class Top extends Module {
   val ramRead = ram.read(address(12,2))
   //val romRead = rom.read(address(31,2))
   val addrPipe = RegNext(address, 0.U)
-  val romDat = Seq.tabulate(4)(i => VecInit(programBinary.map(_.U(8.W))).apply(addrPipe + (3-i).U)).reduce(_ ## _)
+  val romDat = RegNext(Seq.tabulate(4)(i => VecInit(programBinary.map(_.U(8.W))).apply(address + (3-i).U)).reduce(_ ## _), 0.U)
   when(RegNext(readRequest, 0.B)) {
     val rdData = WireDefault(0.U)
     when(addrPipe <= programBinary.length.U) {
