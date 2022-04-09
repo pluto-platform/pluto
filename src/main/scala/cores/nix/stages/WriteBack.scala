@@ -1,14 +1,16 @@
 package cores.nix.stages
 
 import chisel3._
-import chisel3.util.Valid
+import chisel3.util.{Fill, MuxCase, MuxLookup, Valid}
 import lib.util.BundleItemAssignment
 import cores.nix
 import cores.nix.Forwarding
 import Interfaces.MemoryToWriteBack
+import cores.lib.ControlTypes.MemoryAccessWidth
 import cores.modules.{ControlAndStatusRegisterFile, IntegerRegisterFile, PipelineStage}
 import cores.nix.Pipeline.DataChannel
 import cores.lib.Exception
+import lib.LookUp.lookUp
 
 class WriteBack extends PipelineStage(new MemoryToWriteBack, new Bundle {}) {
 
@@ -23,7 +25,14 @@ class WriteBack extends PipelineStage(new MemoryToWriteBack, new Bundle {}) {
     val ecallRetired = Output(Bool())
   })
 
-  val writeBackValue = Mux(upstream.data.control.isLoad, io.dataResponse.bits.readData, upstream.data.registerWriteBack.value)
+
+  val loadValue = lookUp(upstream.data.accessWidth) in (
+    MemoryAccessWidth.Word -> io.dataResponse.bits.readData,
+    MemoryAccessWidth.HalfWord -> Mux(upstream.data.signed, Fill(16, io.dataResponse.bits.readData(15)), Fill(16, 0.B)) ## io.dataResponse.bits.readData(15,0),
+    MemoryAccessWidth.Byte -> Mux(upstream.data.signed, Fill(24, io.dataResponse.bits.readData(7)), Fill(24, 0.B)) ## io.dataResponse.bits.readData(7,0)
+  )
+
+  val writeBackValue = Mux(upstream.data.control.isLoad, loadValue, upstream.data.registerWriteBack.value)
 
   upstream.flowControl.set(
     _.flush := 0.B,
@@ -59,7 +68,4 @@ class WriteBack extends PipelineStage(new MemoryToWriteBack, new Bundle {}) {
   io.instructionRetired := !(upstream.data.control.isLoad && !io.dataResponse.valid)
   io.ecallRetired := upstream.data.control.isEcall
 
-}
-object Emitter extends App {
-  emitVerilog(new WriteBack)
 }

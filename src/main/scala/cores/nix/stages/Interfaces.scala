@@ -107,6 +107,9 @@ object Interfaces {
       val value = UInt(32.W)
     }
 
+    val accessWidth = MemoryAccessWidth()
+    val signed = Bool()
+
     val control = new Bundle {
       val isEcall = Bool()
       val isLoad = Bool()

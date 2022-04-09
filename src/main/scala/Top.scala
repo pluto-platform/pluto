@@ -5,6 +5,7 @@ import firrtl.annotations.MemorySynthInit
 import lib.util.BundleItemAssignment
 import cores.lib.ControlTypes.{MemoryAccessResult, MemoryOperation}
 import peripherals.uart.{UartReceiver, UartTransmitter}
+import lib.util.SeqToTransposable
 
 import java.io.{File, PrintWriter}
 import java.nio.file.{Files, Paths}
@@ -22,11 +23,14 @@ class Top extends Module {
     override def toFirrtl = MemorySynthInit
   })
 
-  val simpleBlink = Files.readAllBytes(Paths.get("../pluto-rt/rust.bin"))
+  val programBinary = Files.readAllBytes(Paths.get("../pluto-rt/rust.bin"))
     .map(_.toLong & 0xFF)
+    .map(BigInt(_)) ++ Seq.fill(16)(BigInt(0))
+  val program = programBinary
     .grouped(4)
     .map(a => a(0) | (a(1) << 8) | (a(2) << 16) | (a(3) << 24))
-    .toArray.map(BigInt(_)) ++ Seq.fill(10)(BigInt(0))
+    .toSeq
+
 
   def writeHexSeqToFile(seq: Seq[BigInt], fileName: String): Unit = {
     val writer = new PrintWriter(new File(fileName))
@@ -34,7 +38,7 @@ class Top extends Module {
     writer.close()
   }
 
-  val receiver = Module(new UartReceiver(434))
+  val receiver = Module(new UartReceiver(434)) // 434
   receiver.io.rx := io.rx
   val transmitter = Module(new UartTransmitter(434))
   transmitter.io.set(
@@ -43,7 +47,7 @@ class Top extends Module {
   )
   io.tx := transmitter.io.tx
 
-  val rom = VecInit(simpleBlink.map(_.U)).apply(RegNext(pipeline.io.instructionChannel.request.bits.address(31,2), 0.U))
+  val rom = VecInit(program.map(_.U(32.W))).apply(RegNext(pipeline.io.instructionChannel.request.bits.address(31,2), 0.U))
   /*
   SyncReadMem(2048, UInt(32.W))
   loadMemoryFromFileInline(rom, "prog.txt")
@@ -73,11 +77,12 @@ class Top extends Module {
   val address = pipeline.io.dataChannel.request.bits.address
   val ramRead = ram.read(address(12,2))
   //val romRead = rom.read(address(31,2))
+  val addrPipe = RegNext(address, 0.U)
+  val romDat = Seq.tabulate(4)(i => VecInit(programBinary.map(_.U(8.W))).apply(addrPipe + (3-i).U)).reduce(_ ## _)
   when(RegNext(readRequest, 0.B)) {
     val rdData = WireDefault(0.U)
-    val addrPipe = RegNext(address, 0.U)
-    when(addrPipe <= simpleBlink.length.U) {
-      rdData := VecInit(simpleBlink.map(_.U)).apply(addrPipe)
+    when(addrPipe <= programBinary.length.U) {
+      rdData := romDat
     }.elsewhen(0x80000000L.U <= addrPipe && addrPipe < (0x80000000L+1024).U) {
       rdData := ramRead
     }.elsewhen(addrPipe === 0x10000.U) {
