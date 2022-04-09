@@ -62,7 +62,7 @@ class Decode extends PipelineStage(new FetchToDecode, new DecodeToExecute) {
 
   downstream.data.set(
     _.pc := upstream.data.pc,
-    _.registerOperand := io.registerSources.data,
+    _.registerOperand := Mux(RegNext(io.hazardDetection.hazard, 0.B), RegNext(io.registerSources.data, VecInit(0.U,0.U)), io.registerSources.data),
     _.csrIndex := immediate(11,0),
     _.immediate := immediate,
     _.source := source,
