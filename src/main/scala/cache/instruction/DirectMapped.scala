@@ -16,7 +16,7 @@ object DirectMapped {
   }
 }
 
-class DirectMapped(dim: Cache.Dimension) extends InstructionCache(dim) {
+class DirectMapped(val dim: Cache.Dimension) extends InstructionCache(dim) {
   implicit val d = dim
   import dim.{lines, blockSize, wordsPerLine, Widths}
 
@@ -27,25 +27,25 @@ class DirectMapped(dim: Cache.Dimension) extends InstructionCache(dim) {
 
 
   val addressReg = RegInit(0.U(Widths.address.W))
-  val index = Mux(stateReg === State.Hit, io.request.address.getIndex, addressReg.getIndex)
+  val index = Mux(stateReg === State.Hit, io.request.bits.address.getIndex, addressReg.getIndex)
   val fillPointerReg = RegInit((1.B +: Seq.fill(wordsPerLine - 1)(0.B)).toVec)
   val requestPipe = RegNext(io.request.valid, 0.B)
 
   val meta = metas.read(index)
   val hit = (meta.tag === addressReg.getTag && meta.valid)
-  when(stateReg === State.Hit && (hit || !requestPipe)) { addressReg := io.request.address }
+  when(stateReg === State.Hit && (hit || !requestPipe)) { addressReg := io.request.bits.address }
 
+  val blockOffset = io.request.bits.address.getBlockOffset
   val wordSelectorReg = RegEnable( // register a one-hot version of the block offset if cache is operating normally
-    UIntToOH(io.request.address.getBlockOffset, wordsPerLine).asBools.toVec,
+    UIntToOH(blockOffset).asBools.toVec,
     Seq.fill(wordsPerLine)(0.B).toVec,
-    stateReg === State.Hit && hit
+    stateReg === State.Hit && (hit || !requestPipe)
   )
+  io.response.bits.instruction := blocks.read(index).reduceWithOH(wordSelectorReg)
 
-  io.response.instruction := blocks.read(index).reduceWithOH(wordSelectorReg)
 
-
-  io.fillPort.address := addressReg
-  io.fillPort.length := blockSize.U
+  io.fillPort.address := addressReg.getTag ## addressReg.getIndex ## Fill(Widths.blockOffset + 2, 0.B)
+  io.fillPort.length := wordsPerLine.U
   io.fillPort.fill := 0.B
 
   io.request.ready := 0.B
@@ -54,7 +54,7 @@ class DirectMapped(dim: Cache.Dimension) extends InstructionCache(dim) {
   switch(stateReg) {
     is(State.Hit) {
       stateReg := Mux(!hit && requestPipe, State.Miss, State.Hit)
-      io.request.ready := requestPipe && hit
+      io.request.ready := (requestPipe && hit) || !requestPipe
       io.response.valid := requestPipe && hit
     }
     is(State.Miss) {

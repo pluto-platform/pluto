@@ -11,26 +11,25 @@ object InstructionCache {
 
 
   class Request(implicit dim: Cache.Dimension) extends Bundle {
-    val valid = Input(Bool())
-    val ready = Output(Bool())
-    val address = Input(UInt(dim.Widths.address.W))
+    val address = UInt(dim.Widths.address.W)
   }
+  class RequestIO(implicit dim: Cache.Dimension) extends DecoupledIO(new Request)
   class Response extends Bundle {
-    val valid = Output(Bool())
-    val instruction = Output(Word())
+    val instruction = Word()
   }
-  class FillInterface(implicit dim: Cache.Dimension) extends Bundle {
+  class ResponseIO extends ValidIO(new Response)
+  class FillIO(implicit dim: Cache.Dimension) extends Bundle {
     val fill = Output(Bool())
     val address = Output(UInt(dim.Widths.address.W))
-    val length = Output(UInt(dim.Widths.blockOffset.W))
+    val length = Output(UInt((dim.Widths.blockOffset+1).W))
 
     val valid = Input(Bool())
     val data = Input(Word())
   }
   class IO(implicit dim: Cache.Dimension) extends Bundle {
-    val request = new InstructionCache.Request
-    val response = new InstructionCache.Response
-    val fillPort = new InstructionCache.FillInterface
+    val request = Flipped(new InstructionCache.RequestIO)
+    val response = new InstructionCache.ResponseIO
+    val fillPort = new InstructionCache.FillIO
   }
 
 }
