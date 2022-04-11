@@ -23,7 +23,7 @@ object ALU {
 
     def fromInstruction(instr: UInt): AluFunction.Type = {
       val opcode = Opcode.fromInstruction(instr)
-      val funct7_5 = Mux(opcode === Opcode.register, instr(30), 0.B)
+      val funct7_5 = Mux(opcode === Opcode.register || instr(14,12)==="b101".U, instr(30), 0.B)
       val funct3 = Mux(opcode.isOneOf(Opcode.register, Opcode.immediate), instr(14,12), 0.U)
       AluFunction.safe(funct7_5 ## funct3)._1
     }

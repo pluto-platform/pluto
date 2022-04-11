@@ -47,7 +47,7 @@ class IntegerRegisterFile(init: Option[Seq[BigInt]] = None) extends Module {
       val memory = RegInit(VecInit(init.map(_.U(32.W))))
 
       io.source.request.index.zip(io.source.response.data).foreach { case (address, data) =>
-        data := memory(RegNext(address))
+        data := Mux(RegNext(address) === io.write.bits.index && io.write.valid, io.write.bits.data, memory(RegNext(address)))
       }
       when(io.write.valid) {
         memory(io.write.bits.index) := io.write.bits.data

@@ -1,7 +1,7 @@
 package cores.nix.stages
 
 import chisel3._
-import chisel3.util.MuxCase
+import chisel3.util.{MuxCase, RegEnable}
 import lib.util.BundleItemAssignment
 import Interfaces._
 import cores.lib.riscv.{InstructionType, Opcode}
@@ -38,7 +38,7 @@ class Fetch extends PipelineStage(new ToFetch, new FetchToDecode) {
 
 
 
-  io.registerSources.index := source
+  io.registerSources.index := Mux(downstream.flowControl.stall, RegEnable(source, VecInit(0.U(5.W),0.U(5.W)), !downstream.flowControl.stall), source)
 
   upstream.flowControl.set(
     _.stall := !io.instructionResponse.valid || downstream.flowControl.stall,

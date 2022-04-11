@@ -32,7 +32,7 @@ class DirectMapped(val dim: Cache.Dimension) extends InstructionCache(dim) {
   val requestPipe = RegNext(io.request.valid, 0.B)
 
   val meta = metas.read(index)
-  val hit = (meta.tag === addressReg.getTag && meta.valid)
+  val hit = meta.tag === addressReg.getTag && meta.valid
   when(stateReg === State.Hit && (hit || !requestPipe)) { addressReg := io.request.bits.address }
 
   val blockOffset = io.request.bits.address.getBlockOffset
@@ -73,7 +73,10 @@ class DirectMapped(val dim: Cache.Dimension) extends InstructionCache(dim) {
 
       when(io.fillPort.valid) {
 
-        when(fillPointerReg.last) { stateReg := State.Hit }
+        when(fillPointerReg.last) {
+          requestPipe := 1.B
+          stateReg := State.Hit
+        }
 
         fillPointerReg := fillPointerReg.rotatedLeft
         blocks.write(

@@ -23,7 +23,6 @@ object Cache {
       val address = log2Ceil(coverage.length)
       val byteOffest = 2
       val blockOffset = log2Ceil(wordsPerLine)
-      println(blockOffset, wordsPerLine)
       val index = log2Ceil(size / blockSize)
       val tag = 32 - index - blockOffset - byteOffest
     }

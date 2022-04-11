@@ -76,7 +76,7 @@ class Execute extends PipelineStage(new DecodeToExecute, new ExecuteToMemory) {
   )
 
   io.hazardDetection.set(
-    _.isLoad := upstream.data.control.isLoad,
+    _.isLoad := upstream.data.control.isLoad && !downstream.flowControl.flush,
     _.destination := upstream.data.destination,
     _.canForward := upstream.data.control.withSideEffects.hasRegisterWriteBack
   )

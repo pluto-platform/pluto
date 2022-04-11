@@ -9,17 +9,29 @@ import org.scalatest.flatspec.AnyFlatSpec
 
 class DirectMappedSpec extends AnyFlatSpec with ChiselScalatestTester {
 
-  it should "run" in {
+  behavior of "Direct-mapped instruction cache"
 
-    val size = 0x10000
+  it should "handle sequential reads" in {
+    val size = 0x1000
+    cacheTest(
+      Cache.Dimension(1024, 32, BigInt(0) until BigInt(size)),
+      Seq.fill(size)(uRand(32.W)),
+      Seq.tabulate(size/4)(i => i*4)
+    )
+  }
+  it should "handle random reads" in {
+    val size = 0x1000
+    cacheTest(
+      Cache.Dimension(1024, 32, BigInt(0) until BigInt(size)),
+      Seq.fill(size)(uRand(32.W)),
+      Seq.fill(300)(uRand(0 until (size/4)).litValue.toInt)
+    )
+  }
 
-    test(new DirectMapped(Cache.Dimension(1024, 32, BigInt(0) until BigInt(size)))).withAnnotations(Seq(WriteVcdAnnotation)) { dut =>
+  def cacheTest(dim: Cache.Dimension, mem: Seq[UInt], accesses: Seq[Int]) = {
+    test(new DirectMapped(dim)) { dut =>
 
-      val mem = Seq.tabulate(size)(i => (i*4).U)
-
-      val accesses = Seq.fill(100)(uRand(0 until (size/4)).litValue.toInt * 4)
-
-      val expectedStream = accesses.map(mem(_))
+      val expectedStream = accesses.map(i => mem(i/4))
 
       dut.io.request.initSource().setSourceClock(dut.clock)
       dut.io.response.initSink().setSinkClock(dut.clock)
@@ -29,14 +41,11 @@ class DirectMappedSpec extends AnyFlatSpec with ChiselScalatestTester {
           val req = dut.io.fillPort.fill.peek.litToBoolean
           val addr = dut.io.fillPort.address.peekInt.toInt / 4
           val len = dut.io.fillPort.length.peekInt.toInt
-          println(s"$req -> $addr ($len)")
           dut.clock.step()
           if (req) {
-            println("request!")
             for (i <- 0 until len) {
               dut.io.fillPort.valid.poke(1.B)
               dut.io.fillPort.data.poke(mem(addr + i))
-              println(s"sending ${mem(addr + i)}")
               dut.clock.step()
             }
             dut.io.fillPort.valid.poke(0.B)
