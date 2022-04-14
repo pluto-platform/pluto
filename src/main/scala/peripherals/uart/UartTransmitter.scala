@@ -4,27 +4,28 @@ import chisel3._
 import chisel3.experimental.ChiselEnum
 import chisel3.util._
 import peripherals.uart.UartTransmitter.State
+import lib.Types.Byte
 
 object UartTransmitter {
   object State extends ChiselEnum {
     val Idle, Send, Stop = Value
   }
 }
-class UartTransmitter(val pv: Int) extends Module {
+class UartTransmitter extends Module {
 
   val io = IO(new Bundle {
 
     val tx = Output(Bool())
-    val send = Flipped(Decoupled(UInt(8.W)))
+    val period = Input(UInt())
+    val send = Flipped(Decoupled(Byte()))
 
   })
 
-  val countReg = RegInit(0.U(32.W))
-  val periodReg = RegInit(pv.U)
+  val countReg = RegInit(0.U(20.W))
   val tickReg = RegInit(0.U(4.W))
   val stateReg = RegInit(State.Idle)
 
-  val periodTick = periodReg === countReg
+  val periodTick = countReg === io.period
 
   val shiftReg = RegInit(0.U(9.W))
 
@@ -45,6 +46,7 @@ class UartTransmitter(val pv: Int) extends Module {
       io.tx := shiftReg(0)
       when(tickReg > 8.U) {
         stateReg := State.Stop
+        countReg := 0.U
         io.tx := 1.B
       }.elsewhen(periodTick) {
         shiftReg := 0.B ## shiftReg(8,1)

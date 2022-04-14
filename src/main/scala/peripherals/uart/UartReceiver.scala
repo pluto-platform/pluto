@@ -1,46 +1,48 @@
 package peripherals.uart
 
 import chisel3.experimental.ChiselEnum
-import chisel3.util.{is, switch}
+import chisel3.util.{Decoupled, is, switch}
 import chisel3._
 import peripherals.uart.UartReceiver.State
-
+import lib.Types.Byte
+import lib.util.{Delay, synchronize}
 object UartReceiver {
   object State extends ChiselEnum {
-    val Idle, Positioning, Receiving = Value
+    val Idle, Positioning, Receiving, Enqueue = Value
   }
 }
-class UartReceiver(val pv: Int) extends Module {
+class UartReceiver extends Module {
 
   val io = IO(new Bundle {
-
     val rx = Input(Bool())
-    val received = Output(UInt(11.W))
-    val valid = Output(Bool())
-
+    val period = Input(UInt())
+    val received = Decoupled(Byte())
   })
 
 
-  val counterReg = RegInit(0.U(32.W))
-  val periodReg = RegInit(pv.U)
+  val counterReg = RegInit(0.U(20.W))
   val tickReg = RegInit(0.U(4.W))
   val stateReg = RegInit(State.Idle)
 
-  val halfPeriodTick = (periodReg >> 1).asUInt === counterReg
-  val periodTick = periodReg === counterReg
-  val rxFallingEdge = RegNext(RegNext(io.rx, 0.B), 0.B) && ! io.rx
+  val halfPeriodTick = counterReg === (io.period >> 1).asUInt
+  val periodTick = counterReg === io.period
+
+  val synchronizedRx = synchronize(io.rx)
+  val rxFallingEdge = Delay(synchronizedRx) && !synchronizedRx
 
   val shiftReg = RegInit(0.U(8.W))
-  io.received := shiftReg
-  io.valid := 0.B
+  io.received.bits := shiftReg
+  io.received.valid := 0.B
 
-  counterReg := Mux(stateReg.isOneOf(State.Positioning, State.Receiving), counterReg + 1.U, counterReg)
+  counterReg := Mux(
+    stateReg.isOneOf(State.Positioning, State.Receiving),
+    counterReg + 1.U,
+    counterReg
+  )
 
   switch(stateReg) {
     is(State.Idle) {
-      io.valid := 1.B
       stateReg := Mux(rxFallingEdge, State.Positioning, State.Idle)
-
     }
     is(State.Positioning) {
 
@@ -68,6 +70,10 @@ class UartReceiver(val pv: Int) extends Module {
         stateReg := State.Receiving
       }
 
+    }
+    is(State.Enqueue) {
+      io.received.valid := 1.B
+      stateReg := Mux(io.received.ready, State.Idle, State.Enqueue)
     }
   }
 
