@@ -64,5 +64,11 @@ object util {
   implicit class Flippable[T <: Data](x: T) {
     def flipped: T = Flipped(x)
   }
+  implicit class OneOf[T <: Data](x: T) {
+    def isOneOf(vs: Seq[T]): Bool = vs.map(v => x.asUInt === v.asUInt).toVec.reduceTree(_ || _)
+    def isOneOf(v: T, vs: T*): Bool = isOneOf(v +: vs)
+  }
+
+  def pow2(x: Int) = scala.math.pow(2,x).toInt
 }
 

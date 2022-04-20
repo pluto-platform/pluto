@@ -22,8 +22,8 @@ object Crossbar {
 class Crossbar(n: Int, m: Int)(addressMap: AddressMap)(implicit params: Tilelink.Parameters) extends Module {
 
   val io = IO(new Bundle {
-    val requesters = Vec(n, Flipped(new Tilelink.Agent.Interface.Requester))
-    val responders = Vec(m, Flipped(new Tilelink.Agent.Interface.Responder))
+    val requesters = Vec(n, Flipped(new Tilelink.Agent.Interface.Requester(params)))
+    val responders = Vec(m, Flipped(new Tilelink.Agent.Interface.Responder(params)))
   })
 
   io.responders.foreach { responder =>

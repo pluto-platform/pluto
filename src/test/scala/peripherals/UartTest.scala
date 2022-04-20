@@ -14,14 +14,15 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester {
 
   it should "receive" in {
 
-    test(new UartReceiver(10-1)).withAnnotations(Seq(WriteVcdAnnotation)) { dut =>
+    test(new UartReceiver).withAnnotations(Seq(WriteVcdAnnotation)) { dut =>
 
+      dut.io.period.poke(9.U)
       dut.resetLine()
 
       uRands(100, 8.W).foreach { v =>
         dut.transmit(v)
 
-        dut.io.received.expect(v)
+        dut.io.received.bits.expect(v)
       }
 
     }
@@ -31,7 +32,9 @@ class UartTest extends AnyFlatSpec with ChiselScalatestTester {
   behavior of "UART Transmitter"
 
   it should "transmit" in {
-    test(new UartTransmitter(10-1)).withAnnotations(Seq(WriteVcdAnnotation)) { dut =>
+    test(new UartTransmitter).withAnnotations(Seq(WriteVcdAnnotation)) { dut =>
+
+      dut.io.period.poke(9.U)
 
       dut.clock.step(2)
 
@@ -80,17 +83,17 @@ object UartTest {
     def transmit(x: UInt): Unit = {
       // start bit
       dut.io.rx.poke(0.B)
-      dut.clock.step(dut.pv+1)
+      dut.clock.step(dut.io.period.peek.litValue.toInt + 1)
 
       // message
       (0 until 8).foreach { i =>
         dut.io.rx.poke(((x.litValue >> i) & 1).B)
-        dut.clock.step(dut.pv+1)
+        dut.clock.step(dut.io.period.peek.litValue.toInt + 1)
       }
 
       // stop bit
       dut.io.rx.poke(1.B)
-      dut.clock.step(dut.pv+1)
+      dut.clock.step(dut.io.period.peek.litValue.toInt + 1)
 
     }
   }

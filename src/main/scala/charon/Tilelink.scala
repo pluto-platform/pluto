@@ -34,7 +34,6 @@ object Tilelink {
   object Channel {
     object A {
       def apply(params: Tilelink.Parameters): A = new A(params)
-      def apply()(implicit params: Tilelink.Parameters): A = A(params)
     }
     class A(params: Tilelink.Parameters) extends Channel {
       import params._
@@ -56,7 +55,6 @@ object Tilelink {
     }
     object D {
       def apply(params: Tilelink.Parameters): D = new D(params)
-      def apply()(implicit params: Tilelink.Parameters): D = D(params)
     }
     class D(params: Tilelink.Parameters) extends Channel {
       import params._
@@ -87,17 +85,15 @@ object Tilelink {
     object Interface {
       object Requester {
         def apply(params: Tilelink.Parameters): Requester = new Requester(params)
-        def apply()(implicit params: Tilelink.Parameters): Requester = Requester(params)
       }
-      class Requester(params: Tilelink.Parameters) extends Interface {
+      class Requester(val params: Tilelink.Parameters) extends Interface {
         val a = Channel.A(params)
         val d = Channel.D(params).flipped
       }
       object Responder {
         def apply(params: Tilelink.Parameters): Responder = new Responder(params)
-        def apply()(implicit params: Tilelink.Parameters): Responder = Responder(params)
       }
-      class Responder(params: Tilelink.Parameters) extends Interface {
+      class Responder(val params: Tilelink.Parameters) extends Interface {
         val a = Channel.A(params).flipped
         val d = Channel.D(params)
       }
@@ -106,6 +102,7 @@ object Tilelink {
 
 
 
+  /*
   abstract class Agent() extends Module {
 
     val io: Bundle
@@ -120,7 +117,7 @@ object Tilelink {
     }.toSeq
 
   }
-
+*/
 
 
 }

@@ -38,12 +38,14 @@ class Top extends Module {
     writer.close()
   }
 
-  val receiver = Module(new UartReceiver(434)) // 434
+  val receiver = Module(new UartReceiver) // 434
+  receiver.io.period := 434.U
   receiver.io.rx := io.rx
-  val transmitter = Module(new UartTransmitter(434))
+  val transmitter = Module(new UartTransmitter)
   transmitter.io.set(
     _.send.valid := 0.B,
     _.send.bits := DontCare,
+    _.period := 434.U
   )
   io.tx := transmitter.io.tx
 

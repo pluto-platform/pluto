@@ -23,14 +23,16 @@ abstract class Basys3 extends Module {
 }
 object Basys3Emitter extends App {
   emitVerilog(new Basys3 {
-    val receiver = Module(new UartReceiver(10417))
-    val transmitter = Module(new UartTransmitter(10417))
+    val receiver = Module(new UartReceiver)
+    val transmitter = Module(new UartTransmitter)
 
     receiver.io.rx := io.uart.rx
+    receiver.io.period := 10417.U
     io.leds := receiver.io.received
     io.uart.tx := transmitter.io.tx
+    transmitter.io.period := 10417.U
 
-    transmitter.io.send.valid := transmitter.io.send.ready && RegNext(!receiver.io.valid) && receiver.io.valid
+    transmitter.io.send.valid := transmitter.io.send.ready && RegNext(!receiver.io.received.valid) && receiver.io.received.valid
     transmitter.io.send.bits := receiver.io.received
   })
 }

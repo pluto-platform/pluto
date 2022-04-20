@@ -10,7 +10,7 @@ import lib.util.SeqToTransposable
 import java.io.{File, PrintWriter}
 import java.nio.file.{Files, Paths}
 
-class Top extends Module {
+class TopCached extends Module {
   val io = IO(new Bundle {
     val led = Output(Bool())
     val pc = Output(UInt(10.W))
@@ -38,12 +38,14 @@ class Top extends Module {
     writer.close()
   }
 
-  val receiver = Module(new UartReceiver(434)) // 434
+  val receiver = Module(new UartReceiver) // 434
   receiver.io.rx := io.rx
-  val transmitter = Module(new UartTransmitter(434))
+  receiver.io.period := 434.U
+  val transmitter = Module(new UartTransmitter)
   transmitter.io.set(
     _.send.valid := 0.B,
     _.send.bits := DontCare,
+    _.period := 434.U
   )
   io.tx := transmitter.io.tx
 
@@ -113,6 +115,6 @@ class Top extends Module {
 
 }
 
-object TopEmitter extends App {
+object TopCachedEmitter extends App {
   emitVerilog(new Top, Array("--target-dir","build"))
 }

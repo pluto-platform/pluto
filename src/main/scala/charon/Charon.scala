@@ -1,9 +1,11 @@
 package charon
 
+import lib.util.pow2
+
 object Charon {
 
   implicit class RangeBinder(responder: Tilelink.Agent.Interface.Responder) {
-    def bind(address: Int): (Tilelink.Agent.Interface.Responder, Seq[AddressRange]) = (responder, Seq(AddressRange(address, responder.size)))
+    def bind(address: Int): (Tilelink.Agent.Interface.Responder, Seq[AddressRange]) = (responder, Seq(AddressRange(address, pow2(responder.params.a))))
   }
 
   object Link {
