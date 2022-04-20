@@ -1,19 +1,17 @@
 package cache.instruction
 
 import cache.Cache
+import charon.Tilelink
 import chisel3._
 import chisel3.util.log2Ceil
 import lib.Types.Word
+import lib.util.{BundleItemAssignment, SeqConcat, SeqToVecMethods}
 
 class FillFsm(dim: Cache.Dimension) extends Module {
 
   val io = IO(new Bundle {
     val fillreq = Flipped(new InstructionCache.FillIO()(dim))
-    val mem = new Bundle {
-      val address = Output(UInt(32.W))
-      val req = Output(Bool())
-      val data = Input(Word())
-    }
+    val tilelink = Tilelink.Agent.Interface.Requester(Tilelink.Parameters(4, dim.Widths.address, 2))
   })
 
   val counter = RegInit(UInt(log2Ceil(dim.wordsPerLine).W), 0.U)
@@ -25,19 +23,30 @@ class FillFsm(dim: Cache.Dimension) extends Module {
     counter := 0.U
   }
 
-  io.mem.address := io.fillreq.address + (counter ## 0.U(2.W))
-  io.mem.req := 0.B
-
-  io.fillreq.valid := RegNext(fetching, 0.B)
-  io.fillreq.data := io.mem.data
+  io.tilelink.a.set(
+    _.address := io.fillreq.address + (counter ## 0.U(2.W)),
+    _.data := DontCare,
+    _.source := 0.U,
+    _.corrupt := 0.B,
+    _.mask := Seq.fill(4)(0.B).toVec,
+    _.param := 0.U,
+    _.size := 2.U,
+    _.opcode := Tilelink.Operation.Get,
+    _.valid := 0.B
+  )
+  io.tilelink.d.ready := 1.B
+  io.fillreq.valid := io.tilelink.d.valid
+  io.fillreq.data := io.tilelink.d.data.concat
 
   when(fetching) {
 
-    io.mem.req := 1.B
-    when(counter < (io.fillreq.length - 1.U)) {
-      counter := counter + 1.U
-    } otherwise {
-      fetching := 0.B
+    io.tilelink.a.valid := 1.B
+    when(io.tilelink.a.ready) {
+      when(counter < (io.fillreq.length - 1.U)) {
+        counter := counter + 1.U
+      } otherwise {
+        fetching := 0.B
+      }
     }
 
   }

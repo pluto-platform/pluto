@@ -39,13 +39,13 @@ object util {
     private val numberOfBytes = scala.math.ceil(x.getWidth / 8.0).toInt
     def toBytes(n: Int = numberOfBytes): Seq[UInt] = {
       val w = WireDefault(Seq.fill(n)(0.U(8.W)).toVec)
-      Seq.tabulate(numberOfBytes - 1)(_ * 8).map(i => x(i+7,i)).zip(w).foreach { case (w,v) => w := v }
+      Seq.tabulate(numberOfBytes - 1)(_ * 8).map(i => x(i+7,i)).zip(w).foreach { case (v,f) => f := v }
       w(numberOfBytes - 1) := x(x.getWidth-1, (numberOfBytes - 1) * 8).asTypeOf(UInt(8.W))
       w
     }
   }
   implicit class SeqConcat(x: Seq[UInt]) {
-    def concat: UInt = x.reduce(_ ## _)
+    def concat: UInt = x.reverse.reduce(_ ## _)
   }
   implicit class SeqToTransposable[T](x: Seq[Seq[T]]) {
     def T: Seq[Seq[T]] = Seq.tabulate(x.head.length)(i => x.map(_(i)))
@@ -61,8 +61,10 @@ object util {
 
   def synchronize[T <: Data](x: T): T = Delay(x, cycles = 2)
 
-  implicit class Flippable[T <: Data](x: T) {
+  implicit class InputOutputExtender[T <: Data](x: T) {
     def flipped: T = Flipped(x)
+    def asIn: T = Input(x)
+    def asOut: T = Output(x)
   }
   implicit class OneOf[T <: Data](x: T) {
     def isOneOf(vs: Seq[T]): Bool = vs.map(v => x.asUInt === v.asUInt).toVec.reduceTree(_ || _)
