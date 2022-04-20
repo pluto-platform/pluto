@@ -10,17 +10,17 @@ class PipelineControl extends Bundle {
 abstract class PipelineStage[UP <: Data, DOWN <: Data](up: => UP, down: => DOWN) extends Module {
 
   val upstream = IO(new Bundle {
-    val data = Input(up)
+    val reg = Input(up)
     val flowControl = Output(new PipelineControl)
   })
   val downstream = IO(new Bundle {
-    val data = Output(down)
+    val reg = Output(down)
     val flowControl = Input(new PipelineControl)
   })
   upstream.flowControl := downstream.flowControl
 
   def attachRegister(reg: PipelineRegister[DOWN]): PipelineRegister[DOWN] = {
-    reg.upstream.data := downstream.data
+    reg.upstream.data := downstream.reg
     downstream.flowControl := reg.upstream.flowControl
     reg
   }
@@ -50,7 +50,7 @@ class PipelineRegister[T <: Data](gen: => T) extends Module {
   upstream.flowControl := downstream.flowControl
 
   def attachStage[S <: PipelineStage[T,_]](stage: S): S = {
-    stage.upstream.data := downstream.data
+    stage.upstream.reg := downstream.data
     downstream.flowControl := stage.upstream.flowControl
     enable := !stage.upstream.flowControl.stall
     stage

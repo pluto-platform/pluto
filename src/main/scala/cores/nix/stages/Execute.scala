@@ -23,34 +23,34 @@ class Execute extends PipelineStage(new DecodeToExecute, new ExecuteToMemory) {
 
 
 
-  (io.forwarding.channel, upstream.data.source)
+  (io.forwarding.channel, upstream.reg.source)
     .zipped
     .foreach { case (channel, source) => channel.source := source }
 
-  val registerOperand = (upstream.data.registerOperand, io.forwarding.channel)
+  val registerOperand = (upstream.reg.registerOperand, io.forwarding.channel)
     .zipped
     .map { case (reg, channel) => Mux(channel.shouldForward, channel.value, reg) }
 
   val aluOperand = VecInit(
-    lookUp(upstream.data.control.leftOperand) in (
+    lookUp(upstream.reg.leftOperand) in (
       LeftOperand.Register -> registerOperand(0),
-      LeftOperand.PC -> upstream.data.pc,
+      LeftOperand.PC -> upstream.reg.pc,
       LeftOperand.Zero -> 0.U
     ),
-    lookUp(upstream.data.control.rightOperand) in (
+    lookUp(upstream.reg.rightOperand) in (
       RightOperand.Register -> registerOperand(1),
-      RightOperand.Immediate -> upstream.data.immediate.asUInt,
+      RightOperand.Immediate -> upstream.reg.immediate.asUInt,
       RightOperand.Four -> 4.U
     )
   )
 
 
 
-  val writeBackValue = Mux(upstream.data.control.withSideEffects.isCsrWrite,
-    Mux(upstream.data.funct3(2), upstream.data.source(0), registerOperand(0)), // distinguish between imm csr and non imm csr
+  val writeBackValue = Mux(upstream.reg.withSideEffects.isCsrWrite,
+    Mux(upstream.reg.funct3(2), upstream.reg.source(0), registerOperand(0)), // distinguish between imm csr and non imm csr
     registerOperand(1))
 
-  val comparison = MuxLookup(upstream.data.funct3, 0.B, Seq(
+  val comparison = MuxLookup(upstream.reg.funct3, 0.B, Seq(
     "b000".U -> (registerOperand(0) === registerOperand(1)),
     "b001".U -> (registerOperand(0) =/= registerOperand(1)),
     "b100".U -> (registerOperand(0).asSInt < registerOperand(1).asSInt),
@@ -60,45 +60,43 @@ class Execute extends PipelineStage(new DecodeToExecute, new ExecuteToMemory) {
   ))
 
 
-  val jump = upstream.data.control.isJalr || upstream.data.control.isJal || (upstream.data.control.isBranch && comparison)
+  val jump = upstream.reg.withSideEffects.isJalr || upstream.reg.withSideEffects.isJal || (upstream.reg.withSideEffects.isBranch && comparison)
 
-  val target = (Mux(upstream.data.control.isJalr, registerOperand(0), upstream.data.pc).asSInt + upstream.data.immediate).asUInt
+  val target = (Mux(upstream.reg.withSideEffects.isJalr, registerOperand(0), upstream.reg.pc).asSInt + upstream.reg.immediate).asUInt
 
   val alu = Module(new ALU)
   alu.io.set(
     _.operand := aluOperand,
-    _.operation := upstream.data.control.aluFunction
+    _.operation := upstream.reg.aluFunction
   )
 
   io.csrRequest.set(
-    _.valid := upstream.data.control.withSideEffects.isCsrRead,
-    _.bits.index := upstream.data.csrIndex
+    _.valid := upstream.reg.withSideEffects.isCsrRead,
+    _.bits.index := upstream.reg.csrIndex
   )
 
   io.hazardDetection.set(
-    _.isLoad := upstream.data.control.isLoad && !downstream.flowControl.flush,
-    _.destination := upstream.data.destination,
-    _.canForward := upstream.data.control.withSideEffects.hasRegisterWriteBack
+    _.isLoad := upstream.reg.withSideEffects.isLoad && !downstream.flowControl.flush,
+    _.destination := upstream.reg.destination,
+    _.canForward := upstream.reg.withSideEffects.hasRegisterWriteBack
   )
 
-  downstream.data.set(
-    _.pc := upstream.data.pc,
-    _.destination := upstream.data.destination,
+  downstream.reg.set(
+    _.pc := upstream.reg.pc,
+    _.destination := upstream.reg.destination,
     _.aluResult := alu.io.result,
     _.writeValue := writeBackValue,
-    _.csrIndex := upstream.data.csrIndex,
-    _.funct3 := upstream.data.funct3,
-    _.jump := jump,
+    _.csrIndex := upstream.reg.csrIndex,
+    _.funct3 := upstream.reg.funct3,
     _.target := target,
-    _.control.set(
-      _.isEcall := upstream.data.control.isEcall,
-      _.isLoad := upstream.data.control.isLoad,
-      _.memoryOperation := upstream.data.control.memoryOperation,
-      _.withSideEffects.set(
-        _.hasMemoryAccess := upstream.data.control.withSideEffects.hasMemoryAccess,
-        _.isCsrWrite := upstream.data.control.withSideEffects.isCsrWrite,
-        _.hasRegisterWriteBack := upstream.data.control.withSideEffects.hasRegisterWriteBack
-      )
+    _.memoryOperation := upstream.reg.memoryOperation,
+    _.withSideEffects.set(
+      _.jump := jump,
+      _.isLoad := upstream.reg.withSideEffects.isLoad,
+      _.isEcall := upstream.reg.withSideEffects.isEcall,
+      _.hasMemoryAccess := upstream.reg.withSideEffects.hasMemoryAccess,
+      _.isCsrWrite := upstream.reg.withSideEffects.isCsrWrite,
+      _.hasRegisterWriteBack := upstream.reg.withSideEffects.hasRegisterWriteBack
     )
   )
 
@@ -108,10 +106,10 @@ class Execute extends PipelineStage(new DecodeToExecute, new ExecuteToMemory) {
   )
 
   when(downstream.flowControl.flush) {
-    downstream.data.control.isEcall := 0.B
-    downstream.data.control.isLoad := 0.B
-    downstream.data.jump := 0.B
-    downstream.data.control.withSideEffects.set(
+    downstream.reg.withSideEffects.set(
+      _.isEcall := 0.B,
+      _.isLoad := 0.B,
+      _.jump := 0.B,
       _.hasRegisterWriteBack := 0.B,
       _.hasMemoryAccess := 0.B,
       _.isCsrWrite := 0.B
@@ -119,8 +117,4 @@ class Execute extends PipelineStage(new DecodeToExecute, new ExecuteToMemory) {
   }
 
 
-}
-
-object ExecuteEmitter extends App {
-  emitVerilog(new Execute)
 }

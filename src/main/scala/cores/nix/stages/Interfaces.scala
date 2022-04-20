@@ -18,22 +18,21 @@ object Interfaces {
     val instruction = UInt(32.W)
     val validOpcode = Bool()
 
+    val isLui = Bool()
+    val isAuipc = Bool()
+    val isImmediate = Bool()
+    val isRegister = Bool()
+    val destinationIsNonZero = Bool()
+    val instructionType = InstructionType()
 
-
-    val control = new Bundle {
+    val withSideEffects = new Bundle {
       val isJal = Bool()
       val isJalr = Bool()
       val isBranch = Bool()
       val isLoad = Bool()
       val isStore = Bool()
-      val isLui = Bool()
-      val isAuipc = Bool()
-      val isImmediate = Bool()
       val isSystem = Bool()
-      val isRegister = Bool()
-      val destinationIsNonZero = Bool()
       val hasRegisterWriteBack = Bool()
-      val instructionType = InstructionType()
     }
   }
 
@@ -48,26 +47,21 @@ object Interfaces {
 
     val funct3 = UInt(3.W)
 
-    val control = new Bundle {
-      val isEcall = Bool()
+    val leftOperand = LeftOperand()
+    val rightOperand = RightOperand()
+    val aluFunction = AluFunction()
+    val memoryOperation = MemoryOperation()
+
+    val withSideEffects = new Bundle {
       val isLoad = Bool()
       val isBranch = Bool()
       val isJal = Bool()
       val isJalr = Bool()
-
-      val leftOperand = LeftOperand()
-      val rightOperand = RightOperand()
-
-      val aluFunction = AluFunction()
-
-      val memoryOperation = MemoryOperation()
-
-      val withSideEffects = new Bundle {
-        val hasMemoryAccess = Bool()
-        val isCsrRead = Bool()
-        val isCsrWrite = Bool()
-        val hasRegisterWriteBack = Bool()
-      }
+      val isEcall = Bool()
+      val hasMemoryAccess = Bool()
+      val isCsrRead = Bool()
+      val isCsrWrite = Bool()
+      val hasRegisterWriteBack = Bool()
     }
   }
 
@@ -80,18 +74,17 @@ object Interfaces {
     val csrIndex = UInt(12.W)
     val funct3 = UInt(3.W)
 
-    val jump = Bool()
     val target = UInt(32.W)
 
-    val control = new Bundle {
-      val isEcall = Bool()
+    val memoryOperation = MemoryOperation()
+
+    val withSideEffects = new Bundle {
       val isLoad = Bool()
-      val memoryOperation = MemoryOperation()
-      val withSideEffects = new Bundle {
-        val hasMemoryAccess = Bool()
-        val isCsrWrite = Bool()
-        val hasRegisterWriteBack = Bool()
-      }
+      val isEcall = Bool()
+      val jump = Bool()
+      val hasMemoryAccess = Bool()
+      val isCsrWrite = Bool()
+      val hasRegisterWriteBack = Bool()
     }
   }
 
@@ -110,13 +103,11 @@ object Interfaces {
     val accessWidth = MemoryAccessWidth()
     val signed = Bool()
 
-    val control = new Bundle {
-      val isEcall = Bool()
+    val withSideEffects = new Bundle {
       val isLoad = Bool()
-      val withSideEffects = new Bundle {
-        val writeRegisterFile = Bool()
-        val writeCsrFile = Bool()
-      }
+      val isEcall = Bool()
+      val writeRegisterFile = Bool()
+      val writeCsrFile = Bool()
     }
 
   }

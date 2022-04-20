@@ -45,32 +45,32 @@ class Fetch extends PipelineStage(new ToFetch, new FetchToDecode) {
     _.flush := downstream.flowControl.flush
   )
 
-  downstream.data.set(
-    _.pc := upstream.data.pc,
+  downstream.reg.set(
+    _.pc := upstream.reg.pc,
     _.instruction := instruction,
     _.validOpcode := validOpcode,
-    _.control.set(
+    _.isLui := isLui,
+    _.isAuipc := isAuipc,
+    _.isImmediate := isImmediate,
+    _.isRegister := isRegister,
+    _.destinationIsNonZero := destinationIsNoneZero,
+    _.instructionType := InstructionType.fromOpcode(opcode),
+    _.withSideEffects.set(
       _.isJal := isJal,
       _.isJalr := isJalr,
       _.isBranch := isBranch,
       _.isLoad := isLoad,
       _.isStore := isStore,
-      _.isLui := isLui,
-      _.isAuipc := isAuipc,
-      _.isImmediate := isImmediate,
       _.isSystem := isSystem,
-      _.isRegister := isRegister,
-      _.destinationIsNonZero := destinationIsNoneZero,
       _.hasRegisterWriteBack := (!isStore && !isBranch) && destinationIsNoneZero,
-      _.instructionType := InstructionType.fromOpcode(opcode)
     )
   )
   // insert NOP when flushing or when starved by the instruction cache
   when(downstream.flowControl.flush || !io.instructionResponse.valid) {
-    downstream.data.set(
+    downstream.reg.set(
       _.instruction := 0x13.U,
       _.validOpcode := 1.B,
-      _.control.set(
+      _.withSideEffects.set(
         _.isJal := 0.B,
         _.isJalr := 0.B,
         _.isBranch := 0.B,

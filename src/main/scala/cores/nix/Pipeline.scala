@@ -106,7 +106,7 @@ class Pipeline(state: Option[Pipeline.State] = None) extends Module {
     .attachStage(Stage.writeBack)
 
   Stage.writeBack.downstream.flowControl := 0.U.asTypeOf(new PipelineControl)
-  Stage.fetch.upstream.data.pc := Components.pc.io.value
+  Stage.fetch.upstream.reg.pc := Components.pc.io.value
 
   io.dataChannel.set(
     _.request <> Stage.memory.io.dataRequest,
