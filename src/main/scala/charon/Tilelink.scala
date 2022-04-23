@@ -3,6 +3,8 @@ package charon
 import Chisel.DecoupledIO
 import chisel3._
 import chisel3.experimental.ChiselEnum
+import chisel3.util.Decoupled
+import lib.LookUp.lookUp
 import lib.util.InputOutputExtender
 import lib.Types.Byte
 
@@ -16,6 +18,10 @@ object Tilelink {
   object Response extends ChiselEnum {
     val AccessAck = Value(0.U(3.W))
     val AccessAckData = Value(1.U(3.W))
+
+    def answer(op: Operation.Type): Response.Type = {
+      Mux(op === Operation.Get, AccessAckData, AccessAck)
+    }
   }
 
   // (address & (2^size -1) == 0) always holds
@@ -29,51 +35,40 @@ object Tilelink {
                               )
 
   abstract class Channel extends Bundle {
-    val valid = Output(Bool()) // The sender is offering progress on an operation.
-    val ready = Input(Bool()) // The receiver accepted the offered progress.
+    val params: Tilelink.Parameters
   }
+  /*
+  val valid = Output(Bool()) // The sender is offering progress on an operation.
+    val ready = Input(Bool()) // The receiver accepted the offered progress.
+   */
   object Channel {
     object A {
       def apply(params: Tilelink.Parameters): A = new A(params)
     }
-    class A(params: Tilelink.Parameters) extends Channel {
+    class A(val params: Tilelink.Parameters) extends Channel {
       import params._
-      val opcode = Tilelink.Operation().asOut // Operation code. Identifies the type of message carried by the channel.
-      val param = UInt(3.W).asOut // Parameter code. Meaning depends on a_opcode; specifies a transfer of caching permissions or a sub-opcode.
-      val size = UInt(z.W).asOut // Logarithm of the operation size: 2^z bytes
-      val source = if(o.isDefined) UInt(o.get.W).asOut else UInt().asOut // Per-link master source identifier.
-      val address = UInt(a.W).asOut // Target byte address of the operation. Must be aligned to size.
-      val mask = Vec(w, Bool()).asOut // Byte lane select for messages with data.
-      val data = Vec(w, Byte()).asOut // Data payload for messages with data.
-      val corrupt = Bool().asOut // The data in this beat is corrupt.
-
-      def filterByRange(range: AddressRange): Tilelink.Channel.A = {
-        val a = Wire(Tilelink.Channel.A(params))
-        a <> this
-        a.valid := range.contains(address) && valid
-        a
-      }
+      val opcode = Tilelink.Operation() // Operation code. Identifies the type of message carried by the channel.
+      val param = UInt(3.W) // Parameter code. Meaning depends on a_opcode; specifies a transfer of caching permissions or a sub-opcode.
+      val size = UInt(z.W) // Logarithm of the operation size: 2^z bytes
+      val source = if(o.isDefined) UInt(o.get.W) else UInt() // Per-link master source identifier.
+      val address = UInt(a.W) // Target byte address of the operation. Must be aligned to size.
+      val mask = Vec(w, Bool()) // Byte lane select for messages with data.
+      val data = Vec(w, Byte()) // Data payload for messages with data.
+      val corrupt = Bool() // The data in this beat is corrupt.
     }
     object D {
       def apply(params: Tilelink.Parameters): D = new D(params)
     }
-    class D(params: Tilelink.Parameters) extends Channel {
+    class D(val params: Tilelink.Parameters) extends Channel {
       import params._
-      val opcode = Tilelink.Response().asOut // Operation code. Identifies the type of message carried by the channel.
-      val param = UInt(2.W).asOut // Parameter code. Meaning depends on d_opcode; specifies permissions to transfer or a sub-opcode.
-      val size = UInt(z.W).asOut // Logarithm of the operation size: 2^z bytes.
-      val source = if(o.isDefined) UInt(o.get.W).asOut else UInt().asOut // Per-link master source identifier. (S
-      val sink = if(i.isDefined) UInt(i.get.W).asOut else UInt().asOut // Per-link slave sink identifier.
-      val denied = Bool().asOut // The slave was unable to service the request.
-      val data = Vec(w,Byte()).asOut // Data payload for messages with data.
-      val corrupt = Bool().asOut // Corruption was detected in the data payload.
-
-      def filterBySource(id: UInt): D = {
-        val d = Wire(new Tilelink.Channel.D(params))
-        d <> this
-        d.valid := source === id && valid
-        d
-      }
+      val opcode = Tilelink.Response() // Operation code. Identifies the type of message carried by the channel.
+      val param = UInt(2.W) // Parameter code. Meaning depends on d_opcode; specifies permissions to transfer or a sub-opcode.
+      val size = UInt(z.W) // Logarithm of the operation size: 2^z bytes.
+      val source = if(o.isDefined) UInt(o.get.W) else UInt() // Per-link master source identifier. (S
+      val sink = if(i.isDefined) UInt(i.get.W) else UInt() // Per-link slave sink identifier.
+      val denied = Bool() // The slave was unable to service the request.
+      val data = Vec(w,Byte()) // Data payload for messages with data.
+      val corrupt = Bool() // Corruption was detected in the data payload.
     }
 
   }
@@ -88,15 +83,25 @@ object Tilelink {
         def apply(params: Tilelink.Parameters): Requester = new Requester(params)
       }
       class Requester(val params: Tilelink.Parameters) extends Interface {
-        val a = Channel.A(params)
-        val d = Channel.D(params).flipped
+        val a = Decoupled(Channel.A(params))
+        val d = Decoupled(Channel.D(params)).flipped
+
+        def <=>(responder: Responder): Unit = {
+          this.a <> responder.a
+          this.d <> responder.d
+        }
       }
       object Responder {
         def apply(params: Tilelink.Parameters): Responder = new Responder(params)
       }
       class Responder(val params: Tilelink.Parameters) extends Interface {
-        val a = Channel.A(params).flipped
-        val d = Channel.D(params)
+        val a = Decoupled(Channel.A(params)).flipped
+        val d = Decoupled(Channel.D(params))
+
+        def <=>(requester: Requester): Unit = {
+          this.a <> requester.a
+          this.d <> requester.d
+        }
       }
     }
   }

@@ -26,7 +26,7 @@ class Nix extends PlutoCore {
   fillFSM.io.tilelink <> io.instructionRequester
 
 
-  io.dataRequester.a.set(
+  io.dataRequester.a.bits.set(
     _.opcode := Mux(pipeline.io.dataChannel.request.bits.op === MemoryOperation.Read, Tilelink.Operation.Get, Tilelink.Operation.PutPartialData),
     _.param := 0.U,
     _.size := pipeline.io.dataChannel.request.bits.accessWidth.asUInt,
@@ -40,7 +40,7 @@ class Nix extends PlutoCore {
   pipeline.io.dataChannel.request.ready := io.dataRequester.d.ready
 
   pipeline.io.dataChannel.response.bits.set(
-    _.readData := io.dataRequester.d.data.concat,
+    _.readData := io.dataRequester.d.bits.data.concat,
     _.result := MemoryAccessResult.Success
   )
   io.dataRequester.d.ready := 1.B

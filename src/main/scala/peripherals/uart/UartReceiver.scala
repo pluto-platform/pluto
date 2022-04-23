@@ -15,7 +15,7 @@ class UartReceiver extends Module {
 
   val io = IO(new Bundle {
     val rx = Input(Bool())
-    val period = Input(UInt())
+    val period = Input(UInt(32.W))
     val received = Decoupled(Byte())
   })
 

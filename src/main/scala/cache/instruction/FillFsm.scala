@@ -5,7 +5,7 @@ import charon.Tilelink
 import chisel3._
 import chisel3.util.log2Ceil
 import lib.Types.Word
-import lib.util.{BundleItemAssignment, SeqConcat, SeqToVecMethods}
+import lib.util.{BundleItemAssignment, SeqConcat, SeqToVecMethods, rising}
 
 class FillFsm(dim: Cache.Dimension) extends Module {
 
@@ -18,12 +18,12 @@ class FillFsm(dim: Cache.Dimension) extends Module {
 
   val fetching = RegInit(0.B)
 
-  when(io.fillreq.fill && !fetching) {
+  when(rising(io.fillreq.fill) && !fetching) {
     fetching := 1.B
     counter := 0.U
   }
 
-  io.tilelink.a.set(
+  io.tilelink.a.bits.set(
     _.address := io.fillreq.address + (counter ## 0.U(2.W)),
     _.data := DontCare,
     _.source := 0.U,
@@ -31,12 +31,12 @@ class FillFsm(dim: Cache.Dimension) extends Module {
     _.mask := Seq.fill(4)(0.B).toVec,
     _.param := 0.U,
     _.size := 2.U,
-    _.opcode := Tilelink.Operation.Get,
-    _.valid := 0.B
+    _.opcode := Tilelink.Operation.Get
   )
+  io.tilelink.a.valid := 0.B
   io.tilelink.d.ready := 1.B
   io.fillreq.valid := io.tilelink.d.valid
-  io.fillreq.data := io.tilelink.d.data.concat
+  io.fillreq.data := io.tilelink.d.bits.data.concat
 
   when(fetching) {
 

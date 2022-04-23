@@ -60,6 +60,7 @@ object util {
   implicit def IntSeqToBigIntSeq(x: Seq[Int]): Seq[BigInt] = x.map(BigInt(_))
 
   def synchronize[T <: Data](x: T): T = Delay(x, cycles = 2)
+  def rising(x: Bool): Bool = !Delay(x) && x
 
   implicit class InputOutputExtender[T <: Data](x: T) {
     def flipped: T = Flipped(x)
@@ -72,5 +73,9 @@ object util {
   }
 
   def pow2(x: Int) = scala.math.pow(2,x).toInt
+
+  implicit class Exponential(x: Int) {
+    def e(exp: Int): Int = (x.toDouble * scala.math.pow(10,exp)).toInt
+  }
 }
 

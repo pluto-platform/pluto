@@ -2,7 +2,7 @@ package charon
 
 import chisel3._
 import lib.util.SeqToVecMethods
-
+/*
 object Arbiter {
 
   def apply[T <: Tilelink.Channel](left: T, right: T): T = {
@@ -39,3 +39,6 @@ object ChannelMux {
     Arbiter(channels.map(_.filterBySource(source)).toVec)
   }
 }
+
+
+ */

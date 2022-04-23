@@ -16,7 +16,7 @@ class UartTransmitter extends Module {
   val io = IO(new Bundle {
 
     val tx = Output(Bool())
-    val period = Input(UInt())
+    val period = Input(UInt(32.W))
     val send = Flipped(Decoupled(Byte()))
 
   })

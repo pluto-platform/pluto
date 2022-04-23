@@ -14,7 +14,7 @@ class CoreTest extends AnyFlatSpec with ChiselScalatestTester {
     test(new Nix).withAnnotations(Seq(WriteVcdAnnotation)) { dut =>
       dut.io.instructionRequester.a.ready.poke(1.B)
       dut.io.instructionRequester.d.valid.poke(1.B)
-      dut.io.instructionRequester.d.data(0).poke(0x13.U)
+      dut.io.instructionRequester.d.bits.data(0).poke(0x13.U)
       dut.clock.step(50)
     }
   }
