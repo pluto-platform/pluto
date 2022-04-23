@@ -27,7 +27,6 @@ class TopCached extends Module {
     .map(a => a(0) | (a(1) << 8) | (a(2) << 16) | (a(3) << 24))
     .toSeq
 
-  io.tx := 0.B
   io.pc := 0.U
 
   val core = Module(new Nix)
@@ -49,32 +48,9 @@ class TopCached extends Module {
     uart.io.tilelinkInterface.bind(0x20000)
   ))
 
-  /*
-  core.io.dataRequester.a.ready := 1.B
-
-  core.io.dataRequester.d.set(
-    _.opcode := Tilelink.Response.AccessAck,
-    _.param := 0.U,
-    _.size := 2.U,
-    _.source := 0.U,
-    _.sink := 0.U,
-    _.denied := 0.B,
-    _.data := Seq.fill(4)(0.U).toVec,
-    _.corrupt := 0.B,
-    _.valid := RegNext(core.io.dataRequester.a.valid, 0.B)
-  )
-
-  val ledReg = RegInit(0.B)
-  io.led := ledReg
-
-  when(core.io.dataRequester.a.valid && core.io.dataRequester.a.address === 0x10000.U) {
-    ledReg := !ledReg
-  }
-  */
-
 
 }
 
 object TopCachedEmitter extends App {
-  emitVerilog(new Top, Array("--target-dir","build"))
+  emitVerilog(new TopCached, Array("--target-dir","build"))
 }
