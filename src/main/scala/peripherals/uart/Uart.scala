@@ -37,13 +37,13 @@ class Uart(initialBaud: Int, frequency: Int) extends Module {
   val responseValidPipe = RegEnable(io.tilelinkInterface.a.valid, 0.B, io.tilelinkInterface.d.ready)
   val deniedReg = RegEnable(io.tilelinkInterface.a.bits.address.isOneOf(0x00.U, 0x04.U, 0x08.U), io.tilelinkInterface.d.ready)
 
-  io.tilelinkInterface.a.ready := io.tilelinkInterface.d.ready
+  io.tilelinkInterface.a.ready := io.tilelinkInterface.d.ready || !responseValidPipe
 
   io.tilelinkInterface.d.bits.set(
     _.opcode := responseReg,
     _.param := 0.U,
     _.size := 2.U,
-    _.source := 0.U,
+    _.source := RegEnable(io.tilelinkInterface.a.bits.source, io.tilelinkInterface.d.ready),
     _.sink := 0.U,
     _.denied := deniedReg,
     _.data := 0.U.toBytes(4),

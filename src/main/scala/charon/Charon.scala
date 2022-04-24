@@ -12,7 +12,9 @@ object Charon {
 
   object Link {
     def apply(requesters: Seq[Tilelink.Agent.Interface.Requester], responders: Seq[(Tilelink.Agent.Interface.Responder, Seq[AddressRange])]): Unit = {
-
+      val linker = Module(new Linker(requesters.length, responders.map(_._2), requesters.head.params))
+      linker.io.in.zip(requesters).foreach { case (port, signal) => port <> signal }
+      linker.io.out.zip(responders.map(_._1)).foreach { case (port, signal) => port <> signal }
     }
     def apply(requester: Tilelink.Agent.Interface.Requester, responders: Seq[(Tilelink.Agent.Interface.Responder, Seq[AddressRange])]): Unit = apply(Seq(requester), responders)
     def apply(requesters: Seq[Tilelink.Agent.Interface.Requester], responder: (Tilelink.Agent.Interface.Responder, Seq[AddressRange])): Unit = apply(requesters, Seq(responder))
@@ -75,6 +77,23 @@ class ChannelBuffer[T <: Tilelink.Channel](channel: => T, depth: Int) extends Mo
   io.dequeue <> Queue(io.enqueue, depth)
 
 }
+object SourceSetter {
+  def apply(channel: DecoupledIO[Tilelink.Channel.A], id: Int): DecoupledIO[Tilelink.Channel.A] = {
+    val setter = Module(new SourceSetter(id, channel.bits.params))
+    setter.io.in <> channel
+    setter.io.out
+  }
+}
+class SourceSetter(id: Int, params: Tilelink.Parameters) extends Module {
+  val io = IO(new Bundle {
+    val in = Decoupled(Tilelink.Channel.A(params)).flipped
+    val out = Decoupled(Tilelink.Channel.A(params))
+  })
+
+  io.out <> io.in
+  io.out.bits.source := id.U
+
+}
 
 class Combiner(addresses: Seq[Seq[AddressRange]], params: Tilelink.Parameters) extends Module {
 
@@ -97,23 +116,67 @@ class Combiner(addresses: Seq[Seq[AddressRange]], params: Tilelink.Parameters) e
       }
     }
 
-  io.root.d <> io.leafs
-    .map(_.d)
-    .reduce { (l,r) =>
-      ChannelMux(l,r)
+  io.root.d <> ChannelMux(io.leafs.map(_.d))
+
+
+}
+
+class Linker(n: Int, addresses: Seq[Seq[AddressRange]], params: Tilelink.Parameters) extends Module {
+  val io = IO(new Bundle {
+    val in = Vec(n, Tilelink.Agent.Interface.Responder(params))
+    val out = Vec(addresses.length, Tilelink.Agent.Interface.Requester(params))
+  })
+
+  val as = io.in
+    .map(_.a)
+    .zipWithIndex
+    .map { case (channel, index) =>
+      SourceSetter(channel, index)
+    }
+    .map(ChannelBuffer(_))
+
+  val requestMatrix = as
+    .map(ChannelDemuxA(_, addresses))
+    .transpose
+    .map(_.map(ChannelBuffer(_)))
+
+  io.out
+    .map(_.a)
+    .zip(requestMatrix)
+    .foreach { case (c,req) =>
+      c <> ChannelBuffer(ChannelMux(req))
     }
 
+  val ds = io.out
+    .map(_.d)
+    .map(ChannelBuffer(_))
+
+  val responseMatrix = ds
+    .map(ChannelDemuxD(_, io.in.length))
+    .transpose
+    .map(_.map(ChannelBuffer(_)))
+
+  io.in
+    .map(_.d)
+    .zip(responseMatrix)
+    .foreach { case (c,res) =>
+      c <> ChannelBuffer(ChannelMux(res))
+    }
 
 }
 
 object ChannelMux {
   def apply[T <: Tilelink.Channel](left: DecoupledIO[T], right: DecoupledIO[T]): DecoupledIO[T] = {
-    val mux = Module(new ChannelMux(chiselTypeOf(left.bits), left.bits.params))
-    mux.io.in <> VecInit(left, right)
+    val mux = Module(new ChannelMux(chiselTypeOf(left.bits)))
+    mux.io.in(0) <> left
+    mux.io.in(1) <> right
     mux.io.out
   }
+  def apply[T <: Tilelink.Channel](channels: Seq[DecoupledIO[T]]): DecoupledIO[T] = {
+    channels.toVec.reduceTree { (l,r) => ChannelMux(l,r) }
+  }
 }
-class ChannelMux[T <: Tilelink.Channel](channel: => T, params: Tilelink.Parameters) extends Module {
+class ChannelMux[T <: Tilelink.Channel](channel: => T) extends Module {
   val io = IO(new Bundle {
     val in = Vec(2, Decoupled(channel)).flipped
     val out = Decoupled(channel)
@@ -125,4 +188,60 @@ class ChannelMux[T <: Tilelink.Channel](channel: => T, params: Tilelink.Paramete
     io.out <> io.in(1)
   }
 
+}
+
+
+object ChannelDemuxA {
+  def apply(channel: DecoupledIO[Tilelink.Channel.A], ranges: Seq[Seq[AddressRange]]): Seq[DecoupledIO[Tilelink.Channel.A]] = {
+    val demux = Module(new ChannelDemuxA(ranges, channel.bits.params))
+    demux.io.in <> channel
+    demux.io.out
+  }
+}
+class ChannelDemuxA(ranges: Seq[Seq[AddressRange]], params: Tilelink.Parameters) extends Module {
+  val io = IO(new Bundle {
+    val in = Decoupled(Tilelink.Channel.A(params)).flipped
+    val out = Vec(ranges.length, Decoupled(Tilelink.Channel.A(params)))
+  })
+
+  io.in.ready := 0.B
+
+  io.out
+    .zip(ranges)
+    .foreach { case (leaf, range) =>
+      leaf.bits <> io.in.bits
+      when(range.map(_.contains(io.in.bits.address)).orR) {
+        leaf.valid := io.in.valid
+        io.in.ready := leaf.ready
+      } otherwise {
+        leaf.valid := 0.B
+      }
+    }
+}
+object ChannelDemuxD {
+  def apply(channel: DecoupledIO[Tilelink.Channel.D], n: Int): Seq[DecoupledIO[Tilelink.Channel.D]] = {
+    val demux = Module(new ChannelDemuxD(n, channel.bits.params))
+    demux.io.in <> channel
+    demux.io.out
+  }
+}
+class ChannelDemuxD(n: Int, params: Tilelink.Parameters) extends Module {
+  val io = IO(new Bundle {
+    val in = Decoupled(Tilelink.Channel.D(params)).flipped
+    val out = Vec(n, Decoupled(Tilelink.Channel.D(params)))
+  })
+
+  io.in.ready := 0.B
+
+  io.out
+    .zipWithIndex
+    .foreach { case (leaf, index) =>
+      leaf.bits <> io.in.bits
+      when(io.in.bits.source === index.U) {
+        leaf.valid := io.in.valid
+        io.in.ready := leaf.ready
+      } otherwise {
+        leaf.valid := 0.B
+      }
+    }
 }

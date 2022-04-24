@@ -12,7 +12,7 @@ class Nix extends PlutoCore {
 
   val pipeline = Module(new Pipeline())
 
-  val iCacheDim = Cache.Dimension(1024, 32, BigInt(0) until BigInt(0x10000))
+  val iCacheDim = Cache.Dimension(1024, 32  , BigInt(0) until BigInt(0x10000))
   val instructionCache = Module(new cache.instruction.DirectMapped(iCacheDim))
   instructionCache.io.request.valid := pipeline.io.instructionChannel.request.valid
   instructionCache.io.request.bits.address := pipeline.io.instructionChannel.request.bits.address

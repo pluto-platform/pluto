@@ -1,7 +1,6 @@
-import charon.Charon.Combine
+import charon.Charon.{Combine, Link, RangeBinder}
 import charon.Tilelink
 import chisel3._
-import charon.Charon.RangeBinder
 import lib.util.{BundleItemAssignment, Exponential, SeqToTransposable, SeqToVecMethods}
 import cores.lib.ControlTypes.{MemoryAccessResult, MemoryOperation}
 import cores.nix.Nix
@@ -40,13 +39,15 @@ class TopCached extends Module {
   io.tx := uart.io.tx
   uart.io.rx := io.rx
 
-  core.io.instructionRequester <> prog.io.tilelink
+  Link(
+    Seq(core.io.instructionRequester, core.io.dataRequester),
+    Seq(
+      prog.io.tilelink.bind(0x0),
+      led.io.tilelink.bind(0x10000),
+      uart.io.tilelinkInterface.bind(0x20000)
+    )
+  )
 
-
-  core.io.dataRequester <=> Combine(Seq(
-    led.io.tilelink.bind(0x10000),
-    uart.io.tilelinkInterface.bind(0x20000)
-  ))
 
 
 }

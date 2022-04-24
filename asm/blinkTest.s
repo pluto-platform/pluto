@@ -1,7 +1,9 @@
 li x5, 0x10000 # led address
-li x6, 0x20008 # uart address
+li x6, 0x20000 # uart address
 li x4, 0 # led state
 li x1, 4  # loop bound
+li x30, 1
+sw x30, 4(x6)
 loop:
 li x2, 0 # loop var
 iter:
@@ -16,5 +18,5 @@ j write
 notzero:
 li x20, 0x31
 write:
-sb x20, 0(x6)
+sb x20, 8(x6)
 j loop
