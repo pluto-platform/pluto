@@ -23,7 +23,7 @@ object ControlTypes {
   }
 
   object MemoryAccessResult extends ChiselEnum {
-    val Success, Denied, Failure = Value
+    val Success, Failure = Value
   }
 
 

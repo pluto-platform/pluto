@@ -133,6 +133,7 @@ class Pipeline(state: Option[Pipeline.State] = None) extends Module {
   Components.hazardDetector.io.set(
     _.decode <> Stage.decode.io.hazardDetection,
     _.execute <> Stage.execute.io.hazardDetection,
+    _.memory <> Stage.memory.io.hazard
   )
   Components.csrFile.io.set(
     _.readRequest <> Stage.execute.io.csrRequest,
@@ -142,7 +143,6 @@ class Pipeline(state: Option[Pipeline.State] = None) extends Module {
   Components.pc.io.branching <> Stage.memory.io.branching
   Components.csrFile.io.instructionRetired := Stage.writeBack.io.instructionRetired
   Components.exceptionUnit.io.set(
-    _.decode <> Stage.decode.io.exception,
     _.writeBack <> Stage.writeBack.io.exception,
     _.csr <> Components.csrFile.io.exceptionUnit,
     _.programCounter <> Components.pc.io.exception

@@ -18,6 +18,7 @@ object ControlAndStatusRegister {
 
   class Interrupts extends Bundle {
     val global = Bool()
+    val previousGlobal = Bool()
     val external = Bool()
     val timer = Bool()
     val software = Bool()

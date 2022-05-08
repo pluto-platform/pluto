@@ -68,7 +68,7 @@ class ControlAndStatusRegisterFile extends Module {
     0xF13.U -> 0.U, // mimpid: implementation ID
     0xF14.U -> 0.U, // mhartid: hardware thread ID
     0xF15.U -> 0.U, // mconfigptr: pointer to configuration data structure
-    0x300.U -> interruptEnableReg.global ## 0.U(3.W), // mstatus: machine status register
+    0x300.U -> interruptEnableReg.previousGlobal ## 0.U(3.W) ## interruptEnableReg.global ## 0.U(3.W), // mstatus: machine status register
     0x301.U -> 1.U(2.W) ## 0.U(4.W) ## 0.U(17.W) ## 1.B ## 0.U(8.W), // misa: ISA and extenstions
     0x304.U -> interruptEnableReg.custom.asUInt ## 0.U(4.W) ## interruptEnableReg.external ## 0.U(3.W) ## interruptEnableReg.timer ## 0.U(3.W) ## interruptEnableReg.software ## 0.U(3.W), // mie: machine interrupt-enable register
     0x305.U -> trapAddressReg ## trapModeReg.asUInt, // mtvec: machine trap-handler base address and mode
@@ -130,9 +130,9 @@ class ControlAndStatusRegisterFile extends Module {
       }
       is(0x344.U) {
         interruptPendingReg.set(
-          _.custom := writeValue(31,16).asBools,
-          _.external := writeValue(11),
-          _.timer := writeValue(7),
+          //_.custom := writeValue(31,16).asBools,
+          //_.external := writeValue(11),
+          //_.timer := writeValue(7),
           _.software := writeValue(3)
         )
       }
@@ -149,6 +149,26 @@ class ControlAndStatusRegisterFile extends Module {
         instructionRetiredCounter := writeValue ## instructionRetiredCounter(31,0)
       }
     }
+  }
+
+  when(io.exceptionUnit.newException.exception) {
+    exceptionCause := io.exceptionUnit.newException.cause
+    exceptionPc := io.exceptionUnit.newException.pc
+    exceptionValue := io.exceptionUnit.newException.value
+  }
+  io.exceptionUnit.set(
+    _.interruptEnable := interruptEnableReg,
+    _.interruptPending := interruptPendingReg,
+    _.mepc := exceptionPc,
+    _.mtvec := trapAddressReg ## 0.U(2.W)
+  )
+  when(io.exceptionUnit.resetMie) {
+    interruptEnableReg.global := 0.B
+  }.elsewhen(io.exceptionUnit.restoreMie) {
+    interruptEnableReg.global := interruptEnableReg.previousGlobal
+  }
+  when(io.exceptionUnit.updateMpie) {
+    interruptEnableReg.previousGlobal := interruptEnableReg.global
   }
 
 }

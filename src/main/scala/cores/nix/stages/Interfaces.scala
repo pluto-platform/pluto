@@ -5,6 +5,7 @@ import cores.lib.ControlTypes._
 import cores.lib.riscv.InstructionType
 import cores.modules.ALU.AluFunction
 import cores.nix.ControlTypes.{LeftOperand, RightOperand}
+import cores.lib.Exception
 
 object Interfaces {
 
@@ -52,12 +53,16 @@ object Interfaces {
     val aluFunction = AluFunction()
     val memoryOperation = MemoryOperation()
 
+    val cause = Exception.Cause()
+
     val withSideEffects = new Bundle {
+      val exception = Bool()
       val isLoad = Bool()
       val isBranch = Bool()
       val isJal = Bool()
       val isJalr = Bool()
       val isEcall = Bool()
+      val isMret = Bool()
       val hasMemoryAccess = Bool()
       val isCsrRead = Bool()
       val isCsrWrite = Bool()
@@ -78,9 +83,13 @@ object Interfaces {
 
     val memoryOperation = MemoryOperation()
 
+    val cause = Exception.Cause()
+
     val withSideEffects = new Bundle {
+      val exception = Bool()
       val isLoad = Bool()
       val isEcall = Bool()
+      val isMret = Bool()
       val jump = Bool()
       val hasMemoryAccess = Bool()
       val isCsrWrite = Bool()
@@ -103,9 +112,13 @@ object Interfaces {
     val accessWidth = MemoryAccessWidth()
     val signed = Bool()
 
+    val cause = Exception.Cause()
+
     val withSideEffects = new Bundle {
+      val exception = Bool()
       val isLoad = Bool()
       val isEcall = Bool()
+      val isMret = Bool()
       val writeRegisterFile = Bool()
       val writeCsrFile = Bool()
     }

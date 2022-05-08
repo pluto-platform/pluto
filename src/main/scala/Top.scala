@@ -23,7 +23,7 @@ class Top extends Module {
     override def toFirrtl = MemorySynthInit
   })
 
-  val programBinary = Files.readAllBytes(Paths.get("../pluto-rt/rust.bin"))
+  val programBinary = Files.readAllBytes(Paths.get("asm/csr.bin"))
     .map(_.toLong & 0xFF)
     .map(BigInt(_)) ++ Seq.fill(16)(BigInt(0))
   val program = programBinary
@@ -41,6 +41,7 @@ class Top extends Module {
   val receiver = Module(new UartReceiver) // 434
   receiver.io.period := 434.U
   receiver.io.rx := io.rx
+  receiver.io.received.ready := 0.B
   val transmitter = Module(new UartTransmitter)
   transmitter.io.set(
     _.send.valid := 0.B,

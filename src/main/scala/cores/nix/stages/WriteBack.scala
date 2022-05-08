@@ -4,9 +4,9 @@ import chisel3._
 import chisel3.util.{Fill, MuxCase, MuxLookup, Valid}
 import lib.util.BundleItemAssignment
 import cores.nix
-import cores.nix.Forwarding
+import cores.nix.{ExceptionUnit, Forwarding}
 import Interfaces.MemoryToWriteBack
-import cores.lib.ControlTypes.MemoryAccessWidth
+import cores.lib.ControlTypes.{MemoryAccessResult, MemoryAccessWidth}
 import cores.modules.{ControlAndStatusRegisterFile, IntegerRegisterFile, PipelineStage}
 import cores.nix.Pipeline.DataChannel
 import cores.lib.Exception
@@ -20,7 +20,7 @@ class WriteBack extends PipelineStage(new MemoryToWriteBack, new Bundle {}) {
     val registerFile = Valid(new IntegerRegisterFile.WriteRequest)
     val csrFile = Valid(new ControlAndStatusRegisterFile.WriteRequest)
     val dataResponse = Flipped(new DataChannel.Response)
-    val exception = Output(new Exception.ExceptionBundle)
+    val exception = new ExceptionUnit.WriteBackChannel
     val instructionRetired = Output(Bool())
     val ecallRetired = Output(Bool())
   })
@@ -34,16 +34,21 @@ class WriteBack extends PipelineStage(new MemoryToWriteBack, new Bundle {}) {
 
   val writeBackValue = Mux(upstream.reg.withSideEffects.isLoad, loadValue, upstream.reg.registerWriteBack.value)
 
+  val memoryAccessError =  io.dataResponse.valid && io.dataResponse.bits.result === MemoryAccessResult.Failure
+
   upstream.flowControl.set(
-    _.flush := 0.B,
+    _.flush := io.exception.flush,
     _.stall := upstream.reg.withSideEffects.isLoad && !io.dataResponse.valid
   )
 
   io.exception.set(
-    _.cause := Exception.Cause.None,
-    _.exception := 0.B,
-    _.value := 0.U,
-    _.pc := upstream.reg.pc
+    _.exception.set(
+      _.exception := upstream.reg.withSideEffects.exception || memoryAccessError,
+      _.cause := Mux(memoryAccessError, Exception.Cause.LoadAccessFault, upstream.reg.cause),
+      _.pc := upstream.reg.pc,
+      _.value := 0.U
+    ),
+    _.mret := upstream.reg.withSideEffects.isMret
   )
 
   io.registerFile.set(

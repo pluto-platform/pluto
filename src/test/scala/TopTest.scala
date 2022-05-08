@@ -8,9 +8,9 @@ class TopTest extends AnyFlatSpec with ChiselScalatestTester {
 
 
   "top" should "work" in {
-    test(new Top).withAnnotations(Seq(WriteVcdAnnotation,VerilatorBackendAnnotation)) {dut =>
+    test(new Top).withAnnotations(Seq(WriteVcdAnnotation)) {dut =>
       dut.clock.setTimeout(0)
-      dut.clock.step(100000)
+      dut.clock.step(300)
     }
   }
 

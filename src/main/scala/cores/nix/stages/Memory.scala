@@ -17,6 +17,7 @@ class Memory extends PipelineStage(new ExecuteToMemory, new MemoryToWriteBack) {
     val dataRequest = new DataChannel.Request
     val csrResponse = Input(new ControlAndStatusRegisterFile.ReadResponse)
     val branching = Flipped(new Branching.ProgramCounterChannel)
+    val hazard = new Hazard.MemoryChannel
 
   })
 
@@ -37,9 +38,15 @@ class Memory extends PipelineStage(new ExecuteToMemory, new MemoryToWriteBack) {
     _.target := upstream.reg.target
   )
 
+  io.hazard.bubble := upstream.reg.withSideEffects.exception || upstream.reg.withSideEffects.isMret || upstream.reg.withSideEffects.isCsrWrite
+  io.hazard.set(
+    _.destination := upstream.reg.destination,
+    _.canForward := upstream.reg.withSideEffects.hasRegisterWriteBack
+  )
+
   upstream.flowControl.set(
-    _.flush := downstream.flowControl.flush || upstream.reg.withSideEffects.jump,
-    _.stall := downstream.flowControl.stall || memNotReady
+    _.flush := downstream.flowControl.flush || (!downstream.flowControl.flush && upstream.reg.withSideEffects.jump),
+    _.stall := downstream.flowControl.stall || (!downstream.flowControl.flush && memNotReady)
   )
 
   io.forwarding.set(
@@ -66,9 +73,12 @@ class Memory extends PipelineStage(new ExecuteToMemory, new MemoryToWriteBack) {
     _.registerWriteBack.index := upstream.reg.destination,
     _.accessWidth := memoryAccessWidth,
     _.signed := !upstream.reg.funct3(2),
+    _.cause := upstream.reg.cause,
     _.withSideEffects.set(
+      _.exception := upstream.reg.withSideEffects.exception,
       _.isLoad := upstream.reg.withSideEffects.isLoad,
       _.isEcall := upstream.reg.withSideEffects.isEcall,
+      _.isMret := upstream.reg.withSideEffects.isMret,
       _.writeCsrFile := upstream.reg.withSideEffects.isCsrWrite,
       _.writeRegisterFile := upstream.reg.withSideEffects.hasRegisterWriteBack
     )
@@ -76,8 +86,10 @@ class Memory extends PipelineStage(new ExecuteToMemory, new MemoryToWriteBack) {
 
   when(memNotReady || downstream.flowControl.flush) {
     downstream.reg.withSideEffects.set(
+      _.exception := 0.B,
       _.isLoad := 0.B,
       _.isEcall := 0.B,
+      _.isMret := 0.B,
       _.writeCsrFile := 0.B,
       _.writeRegisterFile := 0.B
     )
