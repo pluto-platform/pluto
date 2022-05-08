@@ -5,7 +5,7 @@ import lib.util.{BundleItemAssignment, Exponential, SeqToTransposable, SeqToVecM
 import cores.lib.ControlTypes.{MemoryAccessResult, MemoryOperation}
 import cores.nix.Nix
 import peripherals.uart.{Uart, UartReceiver, UartTransmitter}
-import peripherals.{Leds, ProgramMemory}
+import peripherals.{BlockRam, Leds, ProgramMemory}
 
 import java.io.{File, PrintWriter}
 import java.nio.file.{Files, Paths}
@@ -34,6 +34,7 @@ class TopCached extends Module {
   val prog = Module(new ProgramMemory(program))
   val uart = Module(new Uart(115200, 100000000))
   val led = Module(new Leds(1))
+  val ram = Module(new BlockRam(2048))
 
   io.led := led.io.leds(0)
   io.tx := uart.io.tx
@@ -44,7 +45,8 @@ class TopCached extends Module {
     Seq(
       prog.io.tilelink.bind(0x0),
       led.io.tilelink.bind(0x10000),
-      uart.io.tilelinkInterface.bind(0x20000)
+      uart.io.tilelinkInterface.bind(0x20000),
+      ram.io.tilelink.bind(0x80000000L)
     )
   )
 

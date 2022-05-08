@@ -1,5 +1,5 @@
 li x5, 0x10000 # led address
-li x6, 0x20000 # uart address
+li x6, 0x20008 # uart address
 li x4, 0 # led state
 li x1, 4  # loop bound
 li x30, 1

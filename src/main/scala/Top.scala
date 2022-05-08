@@ -41,6 +41,7 @@ class Top extends Module {
   val receiver = Module(new UartReceiver) // 434
   receiver.io.period := 434.U
   receiver.io.rx := io.rx
+  receiver.io.received.ready := 0.B
   val transmitter = Module(new UartTransmitter)
   transmitter.io.set(
     _.send.valid := 0.B,
@@ -89,7 +90,7 @@ class Top extends Module {
       rdData := ramRead
     }.elsewhen(addrPipe === 0x10000.U) {
       rdData := ledReg.asUInt
-    }.elsewhen(addrPipe === 0x20000.U) {
+    }.elsewhen(addrPipe === 0x20008.U) {
       rdData := transmitter.io.send.ready.asUInt
     }
     pipeline.io.dataChannel.response.bits.readData := rdData
@@ -104,7 +105,7 @@ class Top extends Module {
       ram.write(address(31,2), wrData)
     }.elsewhen(address === 0x10000.U) {
       ledReg := wrData(0)
-    }.elsewhen(address === 0x20000.U) {
+    }.elsewhen(address === 0x20008.U) {
       transmitter.io.send.set(
         _.valid := 1.B,
         _.bits := wrData(7,0)

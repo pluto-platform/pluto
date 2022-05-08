@@ -8,6 +8,8 @@ object Charon {
 
   implicit class RangeBinder(responder: Tilelink.Agent.Interface.Responder) {
     def bind(address: Int): (Tilelink.Agent.Interface.Responder, Seq[AddressRange]) = (responder, Seq(AddressRange(address, pow2(responder.params.a))))
+    def bind(address: BigInt): (Tilelink.Agent.Interface.Responder, Seq[AddressRange]) = (responder, Seq(AddressRange(address, pow2(responder.params.a))))
+    def bind(address: Long): (Tilelink.Agent.Interface.Responder, Seq[AddressRange]) = (responder, Seq(AddressRange(address, pow2(responder.params.a))))
   }
 
   object Link {
@@ -74,7 +76,7 @@ class ChannelBuffer[T <: Tilelink.Channel](channel: => T, depth: Int) extends Mo
     val dequeue = Decoupled(channel)
   })
 
-  io.dequeue <> Queue(io.enqueue, depth)
+  io.dequeue <> Queue(io.enqueue, depth, flow = false, pipe = false, useSyncReadMem = false, flush = None)
 
 }
 object SourceSetter {
