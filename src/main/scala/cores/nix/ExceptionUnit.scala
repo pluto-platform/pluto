@@ -14,6 +14,7 @@ object ExceptionUnit {
   class WriteBackChannel extends Bundle {
     val exception = Output(new ExceptionBundle)
     val mret = Output(Bool())
+    val isBubble = Output(Bool())
     val flush = Input(Bool())
   }
 }
@@ -53,7 +54,7 @@ class ExceptionUnit extends Module {
   )
 
   when(io.csr.interruptEnable.global) {
-    when(customInterrupts.orR) {
+    when(customInterrupts.orR && !io.writeBack.isBubble) {
       io.writeBack.flush := 1.B
       io.programCounter.jump := 1.B
       io.csr.updateMpie := 1.B
@@ -64,7 +65,7 @@ class ExceptionUnit extends Module {
         _.pc := restartPc,
         _.cause := Exception.Cause.MachineExternalInterrupt
       )
-    }.elsewhen(io.csr.interruptPending.external && io.csr.interruptEnable.external) {
+    }.elsewhen(io.csr.interruptPending.external && io.csr.interruptEnable.external && !io.writeBack.isBubble) {
       io.programCounter.jump := 1.B
       io.writeBack.flush := 1.B
       io.csr.updateMpie := 1.B
@@ -75,7 +76,7 @@ class ExceptionUnit extends Module {
         _.pc := restartPc,
         _.cause := Exception.Cause.MachineExternalInterrupt
       )
-    }.elsewhen(io.csr.interruptPending.timer && io.csr.interruptEnable.timer) {
+    }.elsewhen(io.csr.interruptPending.timer && io.csr.interruptEnable.timer && !io.writeBack.isBubble) {
       io.programCounter.jump := 1.B
       io.writeBack.flush := 1.B
       io.csr.updateMpie := 1.B
@@ -86,7 +87,7 @@ class ExceptionUnit extends Module {
         _.pc := restartPc,
         _.cause := Exception.Cause.MachineTimerInterrupt
       )
-    }.elsewhen(io.csr.interruptPending.software && io.csr.interruptEnable.software) {
+    }.elsewhen(io.csr.interruptPending.software && io.csr.interruptEnable.software && !io.writeBack.isBubble) {
       io.programCounter.jump := 1.B
       io.writeBack.flush := 1.B
       io.csr.updateMpie := 1.B

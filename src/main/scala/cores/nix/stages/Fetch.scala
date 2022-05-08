@@ -63,6 +63,7 @@ class Fetch extends PipelineStage(new ToFetch, new FetchToDecode) {
       _.isStore := isStore,
       _.isSystem := isSystem,
       _.hasRegisterWriteBack := (!isStore && !isBranch) && destinationIsNoneZero,
+      _.isBubble := 0.B
     )
   )
   // insert NOP when flushing or when starved by the instruction cache
@@ -77,7 +78,8 @@ class Fetch extends PipelineStage(new ToFetch, new FetchToDecode) {
         _.isLoad := 0.B,
         _.isStore := 0.B,
         _.isSystem := 0.B,
-        _.hasRegisterWriteBack := 0.B
+        _.hasRegisterWriteBack := 0.B,
+        _.isBubble := 1.B
       )
     )
   }

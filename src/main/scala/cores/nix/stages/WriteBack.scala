@@ -48,7 +48,8 @@ class WriteBack extends PipelineStage(new MemoryToWriteBack, new Bundle {}) {
       _.pc := upstream.reg.pc,
       _.value := 0.U
     ),
-    _.mret := upstream.reg.withSideEffects.isMret
+    _.mret := upstream.reg.withSideEffects.isMret,
+    _.isBubble := upstream.reg.withSideEffects.isBubble || upstream.reg.withSideEffects.jumped
   )
 
   io.registerFile.set(

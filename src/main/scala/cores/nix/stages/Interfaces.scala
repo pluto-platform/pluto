@@ -34,6 +34,7 @@ object Interfaces {
       val isStore = Bool()
       val isSystem = Bool()
       val hasRegisterWriteBack = Bool()
+      val isBubble = Bool()
     }
   }
 
@@ -63,6 +64,7 @@ object Interfaces {
       val isJalr = Bool()
       val isEcall = Bool()
       val isMret = Bool()
+      val isBubble = Bool()
       val hasMemoryAccess = Bool()
       val isCsrRead = Bool()
       val isCsrWrite = Bool()
@@ -90,6 +92,7 @@ object Interfaces {
       val isLoad = Bool()
       val isEcall = Bool()
       val isMret = Bool()
+      val isBubble = Bool()
       val jump = Bool()
       val hasMemoryAccess = Bool()
       val isCsrWrite = Bool()
@@ -117,7 +120,9 @@ object Interfaces {
     val withSideEffects = new Bundle {
       val exception = Bool()
       val isLoad = Bool()
+      val jumped = Bool()
       val isEcall = Bool()
+      val isBubble = Bool()
       val isMret = Bool()
       val writeRegisterFile = Bool()
       val writeCsrFile = Bool()

@@ -31,12 +31,14 @@ class ControlAndStatusRegisterFile extends Module {
     val instructionRetired = Input(Bool())
     val timerEnable = Output(Bool())
     val exceptionUnit = new Exception.CSRChannel
+    val interrupts = Input(new Interrupts)
   })
 
 
 
   val interruptEnableReg = RegInit(0.U.asTypeOf(new Interrupts))
   val interruptPendingReg = RegInit(0.U.asTypeOf(new Interrupts))
+  interruptPendingReg := io.interrupts
 
   val trapAddressReg = RegInit(0.U(30.W))
   val trapModeReg = RegInit(TrapMode.Direct)

@@ -3,6 +3,7 @@ package cores.nix
 import chisel3._
 import cores.modules.{ControlAndStatusRegisterFile, IntegerRegisterFile, PipelineControl, PipelineRegister}
 import chisel3.util.{DecoupledIO, ValidIO}
+import cores.lib.ControlAndStatusRegister.Interrupts
 import cores.lib.ControlTypes.{MemoryAccessResult, MemoryAccessWidth, MemoryOperation}
 import cores.lib.riscv.Opcode
 import cores.nix.stages.{Decode, Execute, Fetch, Memory, WriteBack}
@@ -17,6 +18,7 @@ object Pipeline {
     val instructionChannel = new InstructionChannel
     val dataChannel = new DataChannel
     val pc = Output(UInt(32.W))
+    val interrupts = Input(new Interrupts)
   }
   class PipelineSimulationIO extends Bundle {
     val pc = UInt(32.W)
@@ -94,6 +96,7 @@ class Pipeline(state: Option[Pipeline.State] = None) extends Module {
   }
 
   io.pc := Components.pc.io.value
+  Components.csrFile.io.interrupts := io.interrupts
 
   Stage.fetch
     .attachRegister(StageReg.fetch)

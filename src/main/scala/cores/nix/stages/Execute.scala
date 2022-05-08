@@ -79,7 +79,8 @@ class Execute extends PipelineStage(new DecodeToExecute, new ExecuteToMemory) {
     _.isLoad := upstream.reg.withSideEffects.isLoad && !downstream.flowControl.flush,
     _.destination := upstream.reg.destination,
     _.canForward := upstream.reg.withSideEffects.hasRegisterWriteBack,
-    _.bubble := upstream.reg.withSideEffects.exception || upstream.reg.withSideEffects.isMret || upstream.reg.withSideEffects.isCsrWrite
+    _.bubble := upstream.reg.withSideEffects.exception || upstream.reg.withSideEffects.isMret,
+    _.isCsr := upstream.reg.withSideEffects.isCsrWrite
   )
 
   downstream.reg.set(
@@ -100,7 +101,8 @@ class Execute extends PipelineStage(new DecodeToExecute, new ExecuteToMemory) {
       _.isEcall := upstream.reg.withSideEffects.isEcall,
       _.hasMemoryAccess := upstream.reg.withSideEffects.hasMemoryAccess,
       _.isCsrWrite := upstream.reg.withSideEffects.isCsrWrite,
-      _.hasRegisterWriteBack := upstream.reg.withSideEffects.hasRegisterWriteBack
+      _.hasRegisterWriteBack := upstream.reg.withSideEffects.hasRegisterWriteBack,
+      _.isBubble := upstream.reg.withSideEffects.isBubble
     )
   )
 
@@ -118,7 +120,8 @@ class Execute extends PipelineStage(new DecodeToExecute, new ExecuteToMemory) {
       _.jump := 0.B,
       _.hasRegisterWriteBack := 0.B,
       _.hasMemoryAccess := 0.B,
-      _.isCsrWrite := 0.B
+      _.isCsrWrite := 0.B,
+      _.isBubble := 1.B
     )
   }
 

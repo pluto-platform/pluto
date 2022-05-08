@@ -38,10 +38,11 @@ class Memory extends PipelineStage(new ExecuteToMemory, new MemoryToWriteBack) {
     _.target := upstream.reg.target
   )
 
-  io.hazard.bubble := upstream.reg.withSideEffects.exception || upstream.reg.withSideEffects.isMret || upstream.reg.withSideEffects.isCsrWrite
+  io.hazard.bubble := upstream.reg.withSideEffects.exception || upstream.reg.withSideEffects.isMret
   io.hazard.set(
     _.destination := upstream.reg.destination,
-    _.canForward := upstream.reg.withSideEffects.hasRegisterWriteBack
+    _.canForward := upstream.reg.withSideEffects.hasRegisterWriteBack,
+    _.isCsr := upstream.reg.withSideEffects.isCsrWrite
   )
 
   upstream.flowControl.set(
@@ -80,7 +81,9 @@ class Memory extends PipelineStage(new ExecuteToMemory, new MemoryToWriteBack) {
       _.isEcall := upstream.reg.withSideEffects.isEcall,
       _.isMret := upstream.reg.withSideEffects.isMret,
       _.writeCsrFile := upstream.reg.withSideEffects.isCsrWrite,
-      _.writeRegisterFile := upstream.reg.withSideEffects.hasRegisterWriteBack
+      _.writeRegisterFile := upstream.reg.withSideEffects.hasRegisterWriteBack,
+      _.isBubble := upstream.reg.withSideEffects.isBubble,
+      _.jumped := upstream.reg.withSideEffects.jump
     )
   )
 
@@ -91,7 +94,9 @@ class Memory extends PipelineStage(new ExecuteToMemory, new MemoryToWriteBack) {
       _.isEcall := 0.B,
       _.isMret := 0.B,
       _.writeCsrFile := 0.B,
-      _.writeRegisterFile := 0.B
+      _.writeRegisterFile := 0.B,
+      _.isBubble := 1.B,
+      _.jumped := 0.B
     )
   }
 

@@ -2,15 +2,14 @@ import chisel3._
 import chisel3.experimental.{ChiselAnnotation, annotate}
 import chisel3.util.experimental.loadMemoryFromFileInline
 import firrtl.annotations.MemorySynthInit
-import lib.util.BundleItemAssignment
+import lib.util.{BundleItemAssignment, SeqToTransposable, SeqToVecMethods}
 import cores.lib.ControlTypes.{MemoryAccessResult, MemoryOperation}
 import peripherals.uart.{UartReceiver, UartTransmitter}
-import lib.util.SeqToTransposable
 
 import java.io.{File, PrintWriter}
 import java.nio.file.{Files, Paths}
 
-class Top extends Module {
+class Top(prog: String) extends Module {
   val io = IO(new Bundle {
     val led = Output(Bool())
     val pc = Output(UInt(10.W))
@@ -23,7 +22,7 @@ class Top extends Module {
     override def toFirrtl = MemorySynthInit
   })
 
-  val programBinary = Files.readAllBytes(Paths.get("asm/csr.bin"))
+  val programBinary = Files.readAllBytes(Paths.get(prog))
     .map(_.toLong & 0xFF)
     .map(BigInt(_)) ++ Seq.fill(16)(BigInt(0))
   val program = programBinary
@@ -62,7 +61,14 @@ class Top extends Module {
     _.response.valid := RegNext(pipeline.io.instructionChannel.request.valid, 0.B),
     _.response.bits.instruction := rom
   )
-
+  pipeline.io.interrupts.set(
+    _.global := 0.B,
+    _.previousGlobal := 0.B,
+    _.custom := Seq.fill(16)(0.B).toVec,
+    _.timer := 0.B,
+    _.software := 0.B,
+    _.external := io.rx
+  )
 
   val ram = SyncReadMem(1024, UInt(32.W))
   val ledReg = RegInit(0.B)
@@ -117,5 +123,5 @@ class Top extends Module {
 }
 
 object TopEmitter extends App {
-  emitVerilog(new Top, Array("--target-dir","build"))
+  emitVerilog(new Top("asm/blink.bin"), Array("--target-dir","build"))
 }

@@ -13,11 +13,13 @@ object Hazard {
     val destination = Output(UInt(5.W))
     val isLoad = Output(Bool())
     val canForward = Output(Bool())
+    val isCsr = Output(Bool())
     val bubble = Output(Bool())
   }
   class MemoryChannel extends Bundle {
     val destination = Output(UInt(5.W))
     val canForward = Output(Bool())
+    val isCsr = Output(Bool())
     val bubble = Output(Bool())
   }
 }
@@ -34,7 +36,7 @@ class HazardDetector extends Module {
   val sourceMatchMemory = io.decode.source.map(_ === io.memory.destination && io.memory.canForward)
 
   val loadUseHazard = sourceMatchExecute.orR && io.execute.isLoad
-  val csrHazard = ((io.decode.source(0) === io.execute.destination && io.execute.canForward) || (io.decode.source(0) === io.memory.destination && io.memory.canForward)) && io.decode.isCsr
+  val csrHazard = io.decode.isCsr && (io.execute.isCsr || io.memory.isCsr)
 
   io.decode.hazard := loadUseHazard || csrHazard || io.execute.bubble || io.memory.bubble
 
