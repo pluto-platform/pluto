@@ -6,13 +6,14 @@ import lib.Types._
 import chisel3._
 import chisel3.experimental.ChiselEnum
 import chisel3.util.{Decoupled, DecoupledIO, Valid, ValidIO}
-import cores.lib.ControlTypes.{MemoryAccessResult, MemoryOperation}
+import cores.lib.ControlTypes.{MemoryAccessResult, MemoryAccessWidth, MemoryOperation}
 
 object DataCache {
   class Request extends Bundle {
     val address = Word()
     val operation = MemoryOperation()
     val writeData = Vec(4, Byte())
+    val size = MemoryAccessWidth()
     val byteEnable = Vec(4, Bool())
   }
   class RequestIO extends DecoupledIO(new Request)
