@@ -165,3 +165,7 @@ class Pipeline(state: Option[Pipeline.State] = None) extends Module {
   - use `isCsrAccess`
 
  */
+
+object PipelineEmitter extends App {
+  emitVerilog(new Pipeline())
+}
