@@ -12,6 +12,15 @@ class Nix extends PlutoCore {
 
   val pipeline = Module(new Pipeline())
 
+  pipeline.io.interrupts.custom := io.interrupts
+  pipeline.io.interrupts.set(
+    _.global := 0.B,
+    _.previousGlobal := 0.B,
+    _.external := 0.B,
+    _.timer := 0.B,
+    _.software := 0.B
+  )
+
   val iCacheDim = Cache.Dimension(1024, 32  , BigInt(0) until BigInt(0x10000))
   val instructionCache = Module(new cache.instruction.DirectMapped(iCacheDim))
   instructionCache.io.request.valid := pipeline.io.instructionChannel.request.valid

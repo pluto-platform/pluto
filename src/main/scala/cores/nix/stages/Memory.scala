@@ -83,7 +83,8 @@ class Memory extends PipelineStage(new ExecuteToMemory, new MemoryToWriteBack) {
       _.writeCsrFile := upstream.reg.withSideEffects.isCsrWrite,
       _.writeRegisterFile := upstream.reg.withSideEffects.hasRegisterWriteBack,
       _.isBubble := upstream.reg.withSideEffects.isBubble,
-      _.jumped := upstream.reg.withSideEffects.jump
+      _.jumped := upstream.reg.withSideEffects.jump,
+      _.hasMemoryAccess := upstream.reg.withSideEffects.hasMemoryAccess
     )
   )
 
@@ -96,7 +97,8 @@ class Memory extends PipelineStage(new ExecuteToMemory, new MemoryToWriteBack) {
       _.writeCsrFile := 0.B,
       _.writeRegisterFile := 0.B,
       _.isBubble := 1.B,
-      _.jumped := 0.B
+      _.jumped := 0.B,
+      _.hasMemoryAccess := 0.B
     )
   }
 

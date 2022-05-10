@@ -18,7 +18,7 @@ class TopCached extends Module {
     val tx = Output(Bool())
   })
 
-  val programBinary = Files.readAllBytes(Paths.get("asm/blinkTest.bin"))
+  val programBinary = Files.readAllBytes(Paths.get("../pluto-rt/rust.bin"))
     .map(_.toLong & 0xFF)
     .map(BigInt(_)) ++ Seq.fill(16)(BigInt(0))
   val program = programBinary
@@ -30,6 +30,7 @@ class TopCached extends Module {
 
   val core = Module(new Nix)
   core.io.interrupts := Seq.fill(16)(0.B).toVec
+
 
   val prog = Module(new ProgramMemory(program))
   val uart = Module(new Uart(115200, 100000000))

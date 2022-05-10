@@ -120,6 +120,7 @@ object Interfaces {
     val withSideEffects = new Bundle {
       val exception = Bool()
       val isLoad = Bool()
+      val hasMemoryAccess = Bool()
       val jumped = Bool()
       val isEcall = Bool()
       val isBubble = Bool()

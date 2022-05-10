@@ -25,6 +25,7 @@ class DirectMapped(val dim: Cache.Dimension) extends InstructionCache(dim) {
 
   val stateReg = RegInit(State.Hit)
 
+  val update = WireDefault(0.B)
 
   val addressReg = RegInit(0.U(Widths.address.W))
   val index = Mux(stateReg === State.Hit, io.request.bits.address.getIndex, addressReg.getIndex)
@@ -33,13 +34,13 @@ class DirectMapped(val dim: Cache.Dimension) extends InstructionCache(dim) {
 
   val meta = metas.read(index)
   val hit = meta.tag === addressReg.getTag && meta.valid
-  when(stateReg === State.Hit && (hit || !requestPipe)) { addressReg := io.request.bits.address }
+  when(update || (stateReg === State.Hit && (hit || !requestPipe))) { addressReg := io.request.bits.address }
 
   val blockOffset = io.request.bits.address.getBlockOffset
   val wordSelectorReg = RegEnable( // register a one-hot version of the block offset if cache is operating normally
     UIntToOH(blockOffset).asBools.toVec,
     Seq.fill(wordsPerLine)(0.B).toVec,
-    stateReg === State.Hit && (hit || !requestPipe)
+    update || (stateReg === State.Hit && (hit || !requestPipe))
   )
   io.response.bits.instruction := blocks.read(index).reduceWithOH(wordSelectorReg)
 
@@ -76,6 +77,7 @@ class DirectMapped(val dim: Cache.Dimension) extends InstructionCache(dim) {
         when(fillPointerReg.last) {
           requestPipe := 1.B
           stateReg := State.Hit
+          update := 1.B
         }
 
         fillPointerReg := fillPointerReg.rotatedLeft
