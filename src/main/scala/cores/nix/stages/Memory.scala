@@ -57,7 +57,7 @@ class Memory extends PipelineStage(new ExecuteToMemory, new MemoryToWriteBack) {
   )
 
   io.dataRequest.set(
-    _.valid := upstream.reg.withSideEffects.hasMemoryAccess,
+    _.valid := upstream.reg.withSideEffects.hasMemoryAccess && !downstream.flowControl.stall && !downstream.flowControl.flush,
     _.bits.set(
       _.address := upstream.reg.aluResult,
       _.writeData := upstream.reg.writeValue,

@@ -46,7 +46,7 @@ object Pipeline {
       val accessWidth = MemoryAccessWidth()
     })
 
-    class Response extends ValidIO(new Bundle {
+    class Response extends DecoupledIO(new Bundle {
       val readData = UInt(32.W)
       val result = MemoryAccessResult()
     })

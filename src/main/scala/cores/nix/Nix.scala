@@ -52,7 +52,7 @@ class Nix extends PlutoCore {
     _.readData := io.dataRequester.d.bits.data.concat,
     _.result := MemoryAccessResult.Success
   )
-  io.dataRequester.d.ready := 1.B
+  io.dataRequester.d.ready := pipeline.io.dataChannel.response.ready
   pipeline.io.dataChannel.response.valid := io.dataRequester.d.valid
 
 }

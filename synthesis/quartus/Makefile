@@ -2,7 +2,7 @@
 
 
 PROJECT = Pluto
-TOP_LEVEL = Top
+TOP_LEVEL = TopCached
 
 PROJECT_FILES = $(PROJECT).qpf $(PROJECT).qsf $(PROJECT).sdc
 

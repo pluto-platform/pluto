@@ -40,6 +40,7 @@ class WriteBack extends PipelineStage(new MemoryToWriteBack, new Bundle {}) {
     _.flush := io.exception.flush,
     _.stall := (upstream.reg.withSideEffects.hasMemoryAccess && !io.dataResponse.valid) || downstream.flowControl.stall
   )
+  io.dataResponse.ready := !downstream.flowControl.stall
 
   io.exception.set(
     _.exception.set(

@@ -14,7 +14,7 @@ class Leds(n: Int) extends Module {
     )
   })
 
-  val reg = RegInit(0.U(n.W))
+  val reg = RegInit(1.U(n.W))
   io.leds := reg
 
   val reqPipe = RegNext(io.tilelink.a.bits)

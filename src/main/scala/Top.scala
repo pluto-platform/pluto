@@ -111,7 +111,7 @@ class Top(prog: String) extends Module {
       ram.write(address(31,2), wrData)
     }.elsewhen(address === 0x10000.U) {
       ledReg := wrData(0)
-    }.elsewhen(address === 0x20000.U) {
+    }.elsewhen(address === 0x20008.U) {
       transmitter.io.send.set(
         _.valid := 1.B,
         _.bits := wrData(7,0)

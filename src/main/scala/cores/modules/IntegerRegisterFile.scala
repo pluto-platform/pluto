@@ -62,8 +62,8 @@ class IntegerRegisterFile(init: Option[Seq[BigInt]] = None) extends Module {
       // handle both read requests
       io.source.request.index.zip(io.source.response.data).foreach { case (address, data) =>
         data := Mux(
-          RegNext(address === io.write.bits.index && io.write.valid, 0.B),
-          RegNext(io.write.bits.data, 0.U),
+          RegNext(address, 0.U) === io.write.bits.index && io.write.valid,
+          io.write.bits.data,
           memory.read(address))
       }
 
