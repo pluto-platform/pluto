@@ -18,6 +18,7 @@ object PlutoCore {
     val interrupts = Input(Vec(16, Bool()))
     val instructionRequester = Tilelink.Agent.Interface.Requester(Tilelink.Parameters(4, 32, 2, Some(5), Some(5)))
     val dataRequester = Tilelink.Agent.Interface.Requester(Tilelink.Parameters(4, 32, 2, Some(5), Some(5)))
+    val pc = Output(UInt(32.W))
   }
 
 }

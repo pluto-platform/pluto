@@ -1,11 +1,11 @@
 import charon.Charon.{Combine, Link, RangeBinder}
 import charon.Tilelink
 import chisel3._
-import lib.util.{BundleItemAssignment, Exponential, SeqToTransposable, SeqToVecMethods}
+import lib.util.{BundleItemAssignment, Delay, Exponential, SeqToTransposable, SeqToVecMethods}
 import cores.lib.ControlTypes.{MemoryAccessResult, MemoryOperation}
 import cores.nix.Nix
 import peripherals.uart.{Uart, UartReceiver, UartTransmitter}
-import peripherals.{BlockRam, Leds, ProgramMemory}
+import peripherals.{BlockRam, Leds, ProgramMemory, SevenSegmentDisplay}
 
 import java.io.{File, PrintWriter}
 import java.nio.file.{Files, Paths}
@@ -18,7 +18,9 @@ class TopCached extends Module {
     val tx = Output(Bool())
   })
 
-  val programBinary = Files.readAllBytes(Paths.get("asm/blinkTest.bin"))
+
+
+  val programBinary = Files.readAllBytes(Paths.get("../pluto-rt/rust.bin"))
     .map(_.toLong & 0xFF)
     .map(BigInt(_)) ++ Seq.fill(16)(BigInt(0))
   val program = programBinary
@@ -29,12 +31,12 @@ class TopCached extends Module {
   val core = Module(new Nix)
   core.io.interrupts := Seq.fill(16)(0.B).toVec
 
-  io.pc := core.io.instructionRequester.a.bits.address
-
   val prog = Module(new ProgramMemory(program))
   val uart = Module(new Uart(115200, 50000000))
   val led = Module(new Leds(1))
   val ram = Module(new BlockRam(1024))
+
+  io.pc := core.io.instructionRequester.a.valid ## prog.io.tilelink.d.valid ## core.io.dataRequester.a.valid ## ram.io.tilelink.d.valid
 
   io.led := led.io.leds(0)
   io.tx := uart.io.tx
@@ -49,6 +51,14 @@ class TopCached extends Module {
       ram.io.tilelink.bind(0x80000000L)
     )
   )
+
+
+
+
+
+
+
+
 
 
 

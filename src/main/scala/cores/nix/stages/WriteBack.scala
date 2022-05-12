@@ -54,13 +54,13 @@ class WriteBack extends PipelineStage(new MemoryToWriteBack, new Bundle {}) {
   )
 
   io.registerFile.set(
-    _.valid := upstream.reg.withSideEffects.writeRegisterFile,
+    _.valid := upstream.reg.withSideEffects.writeRegisterFile && !downstream.flowControl.stall,
     _.bits.index := upstream.reg.registerWriteBack.index,
     _.bits.data := writeBackValue
   )
 
   io.csrFile.set(
-    _.valid := upstream.reg.withSideEffects.writeCsrFile,
+    _.valid := upstream.reg.withSideEffects.writeCsrFile && !downstream.flowControl.stall,
     _.bits.index := upstream.reg.csrWriteBack.index,
     _.bits.value := upstream.reg.csrWriteBack.value
   )

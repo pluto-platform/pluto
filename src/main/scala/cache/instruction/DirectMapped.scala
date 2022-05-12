@@ -22,6 +22,7 @@ class DirectMapped(val dim: Cache.Dimension) extends InstructionCache(dim) {
 
   val blocks = SyncReadMem(lines, Vec(wordsPerLine, Word()))
   val metas = SyncReadMem(lines, LineInfo())
+  val validReg = RegInit(Seq.fill(lines)(0.B).toVec)
 
   val stateReg = RegInit(State.Hit)
 
@@ -33,7 +34,8 @@ class DirectMapped(val dim: Cache.Dimension) extends InstructionCache(dim) {
   val requestPipe = RegNext(io.request.valid, 0.B)
 
   val meta = metas.read(index)
-  val hit = meta.tag === addressReg.getTag && meta.valid
+  val valid = validReg(RegNext(index, 0.U))
+  val hit = meta.tag === addressReg.getTag && valid
   when(update || (stateReg === State.Hit && (hit || !requestPipe))) { addressReg := io.request.bits.address }
 
   val blockOffset = io.request.bits.address.getBlockOffset
@@ -64,6 +66,7 @@ class DirectMapped(val dim: Cache.Dimension) extends InstructionCache(dim) {
       io.response.valid := 0.B
 
       metas.write(addressReg.getIndex, LineInfo(1.B, addressReg.getTag))
+      validReg(addressReg.getIndex) := 1.B
 
     }
     is(State.Fill) {

@@ -34,7 +34,7 @@ class Memory extends PipelineStage(new ExecuteToMemory, new MemoryToWriteBack) {
   val memNotReady = !io.dataRequest.ready && upstream.reg.withSideEffects.hasMemoryAccess
 
   io.branching.set(
-    _.jump := upstream.reg.withSideEffects.jump,
+    _.jump := upstream.reg.withSideEffects.jump && !downstream.flowControl.stall,
     _.target := upstream.reg.target
   )
 
@@ -46,7 +46,7 @@ class Memory extends PipelineStage(new ExecuteToMemory, new MemoryToWriteBack) {
   )
 
   upstream.flowControl.set(
-    _.flush := downstream.flowControl.flush || (!downstream.flowControl.flush && upstream.reg.withSideEffects.jump),
+    _.flush := downstream.flowControl.flush || (!(downstream.flowControl.flush || downstream.flowControl.stall) && upstream.reg.withSideEffects.jump),
     _.stall := downstream.flowControl.stall || (!downstream.flowControl.flush && memNotReady)
   )
 

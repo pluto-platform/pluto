@@ -1,6 +1,6 @@
 
 PROJECT = Pluto
-TOP_LEVEL = Top
+TOP_LEVEL = TopCached
 PROJECT_FILES = synth.tcl config.tcl
 
 PART = xc7a35tcpg236-1
@@ -31,7 +31,7 @@ place_design\n\
 route_design\n\
 report_timing_summary -file sta.rpt\n\
 report_utilization -file util.rpt\n\
-write_bitstream $(PROJECT).bit" > synth.tcl
+write_bitstream -force $(PROJECT).bit" > synth.tcl
 config.tcl:
 	echo "\
 open_hw_manager \n\

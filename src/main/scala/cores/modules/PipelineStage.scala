@@ -52,7 +52,7 @@ class PipelineRegister[T <: Data](gen: => T) extends Module {
   def attachStage[S <: PipelineStage[T,_]](stage: S): S = {
     stage.upstream.reg := downstream.data
     downstream.flowControl := stage.upstream.flowControl
-    enable := !stage.upstream.flowControl.stall
+    enable := !stage.upstream.flowControl.stall || stage.upstream.flowControl.flush
     stage
   }
 }

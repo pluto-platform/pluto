@@ -55,4 +55,6 @@ class Nix extends PlutoCore {
   io.dataRequester.d.ready := pipeline.io.dataChannel.response.ready
   pipeline.io.dataChannel.response.valid := io.dataRequester.d.valid
 
+  io.pc := pipeline.io.pc
+
 }

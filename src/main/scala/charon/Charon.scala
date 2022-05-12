@@ -2,7 +2,7 @@ package charon
 
 import chisel3._
 import chisel3.util.{Decoupled, DecoupledIO, Queue, log2Ceil}
-import lib.util.{BoolVec, InputOutputExtender, SeqToVecMethods, pow2}
+import lib.util.{BoolVec, BundleItemAssignment, InputOutputExtender, SeqToVecMethods, pow2}
 
 object Charon {
 
@@ -128,6 +128,8 @@ class Linker(n: Int, addresses: Seq[Seq[AddressRange]], params: Tilelink.Paramet
     val out = Vec(addresses.length, Tilelink.Agent.Interface.Requester(params))
   })
 
+  val errorSlaves = Seq.fill(n)(Module(new ErrorSlave(params)))
+
   val as = io.in
     .map(_.a)
     .zipWithIndex
@@ -137,7 +139,8 @@ class Linker(n: Int, addresses: Seq[Seq[AddressRange]], params: Tilelink.Paramet
     .map(ChannelBuffer(_))
 
   val requestMatrix = as
-    .map(ChannelDemuxA(_, addresses))
+    .zip(errorSlaves.map(_.io.tilelink.a))
+    .map { case (a, err) => ChannelDemuxA(a, addresses, err) }
     .transpose
     .map(_.map(ChannelBuffer(_)))
 
@@ -160,8 +163,9 @@ class Linker(n: Int, addresses: Seq[Seq[AddressRange]], params: Tilelink.Paramet
   io.in
     .map(_.d)
     .zip(responseMatrix)
-    .foreach { case (c,res) =>
-      c <> ChannelBuffer(ChannelMux(res))
+    .zip(errorSlaves.map(_.io.tilelink.d))
+    .foreach { case ((c,res),err) =>
+      c <> ChannelBuffer(ChannelMux(res :+ err))
     }
 
 }
@@ -193,9 +197,10 @@ class ChannelMux[T <: Tilelink.Channel](channel: => T) extends Module {
 
 
 object ChannelDemuxA {
-  def apply(channel: DecoupledIO[Tilelink.Channel.A], ranges: Seq[Seq[AddressRange]]): Seq[DecoupledIO[Tilelink.Channel.A]] = {
+  def apply(channel: DecoupledIO[Tilelink.Channel.A], ranges: Seq[Seq[AddressRange]], errorSlave: DecoupledIO[Tilelink.Channel.A]): Seq[DecoupledIO[Tilelink.Channel.A]] = {
     val demux = Module(new ChannelDemuxA(ranges, channel.bits.params))
     demux.io.in <> channel
+    demux.io.errorSlave <> errorSlave
     demux.io.out
   }
 }
@@ -203,15 +208,30 @@ class ChannelDemuxA(ranges: Seq[Seq[AddressRange]], params: Tilelink.Parameters)
   val io = IO(new Bundle {
     val in = Decoupled(Tilelink.Channel.A(params)).flipped
     val out = Vec(ranges.length, Decoupled(Tilelink.Channel.A(params)))
+    val errorSlave = Decoupled(Tilelink.Channel.A(params))
   })
 
   io.in.ready := 0.B
 
-  io.out
+  val hits = io.out
     .zip(ranges)
-    .foreach { case (leaf, range) =>
+    .map { case (leaf, range) =>
+      range.map(_.contains(io.in.bits.address)).orR
+    }.toVec
+
+  io.errorSlave.bits <> io.in.bits
+  when(!hits.orR) {
+    io.errorSlave.valid := 1.B
+    io.in.ready := 1.B
+  } otherwise {
+    io.errorSlave.valid := 0.B
+  }
+
+  io.out
+    .zip(hits)
+    .foreach { case (leaf, hit) =>
       leaf.bits <> io.in.bits
-      when(range.map(_.contains(io.in.bits.address)).orR) {
+      when(hit) {
         leaf.valid := io.in.valid
         io.in.ready := leaf.ready
       } otherwise {
@@ -219,6 +239,27 @@ class ChannelDemuxA(ranges: Seq[Seq[AddressRange]], params: Tilelink.Parameters)
       }
     }
 }
+
+class ErrorSlave(params: Tilelink.Parameters) extends Module {
+  val io = IO(new Bundle {
+    val tilelink = Tilelink.Agent.Interface.Responder(params)
+  })
+  io.tilelink.a.ready := 1.B
+  io.tilelink.d.set(
+    _.valid := RegNext(io.tilelink.a.valid, 0.B),
+    _.bits.set(
+      _.opcode := Mux(io.tilelink.a.bits.opcode === Tilelink.Operation.Get, Tilelink.Response.AccessAckData, Tilelink.Response.AccessAck),
+      _.param := 0.U,
+      _.size := RegNext(io.tilelink.a.bits.size, 0.U),
+      _.source := RegNext(io.tilelink.a.bits.source, 0.U),
+      _.sink := ((1 << params.i.get) - 1).U,
+      _.denied := 1.B,
+      _.data := Seq.fill(4)(0.U).toVec,
+      _.corrupt := 0.B
+    )
+  )
+}
+
 object ChannelDemuxD {
   def apply(channel: DecoupledIO[Tilelink.Channel.D], n: Int): Seq[DecoupledIO[Tilelink.Channel.D]] = {
     val demux = Module(new ChannelDemuxD(n, channel.bits.params))

@@ -6,6 +6,12 @@ import org.scalatest.flatspec.AnyFlatSpec
 
 class LinkTest extends AnyFlatSpec with ChiselScalatestTester {
 
+  "seq" should "work" in {
+    test(new CharonTest).withAnnotations(Seq(WriteVcdAnnotation)) { dut =>
+      dut.clock.step(100)
+    }
+  }
+
 }
 
 
