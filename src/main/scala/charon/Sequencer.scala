@@ -55,11 +55,11 @@ class CharonTest extends Module {
     val error = Output(Bool())
   })
 
-  val sequencer = Module(new Sequencer)
+  val sequencer = Seq.fill(3)(Module(new Sequencer))
 
   val leds = Seq.fill(4)(Module(new Leds(1)))
 
-  Link(sequencer.io.tilelink, Seq(
+  Link(sequencer.map(_.io.tilelink), Seq(
     leds(0).io.tilelink.bind(0x00),
     leds(1).io.tilelink.bind(0x04),
     leds(2).io.tilelink.bind(0x08),
@@ -67,6 +67,6 @@ class CharonTest extends Module {
   ))
 
   io.leds := leds.map(_.io.leds).reduce(_ ## _)
-  io.error := sequencer.io.error
+  io.error := sequencer(0).io.error
 
 }

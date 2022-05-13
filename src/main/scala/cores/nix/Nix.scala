@@ -12,12 +12,12 @@ class Nix extends PlutoCore {
 
   val pipeline = Module(new Pipeline())
 
-  pipeline.io.interrupts.custom := io.interrupts
+  pipeline.io.interrupts.custom := io.customInterrupts
   pipeline.io.interrupts.set(
     _.global := 0.B,
     _.previousGlobal := 0.B,
-    _.external := 0.B,
-    _.timer := 0.B,
+    _.external := io.externalInterrupt,
+    _.timer := io.timerInterrupt,
     _.software := 0.B
   )
 

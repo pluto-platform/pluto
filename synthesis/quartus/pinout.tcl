@@ -14,3 +14,5 @@ set_location_assignment PIN_J15 -to io_pc[9]
 
 set_location_assignment PIN_G12 -to io_rx
 set_location_assignment PIN_G9 -to io_tx
+set_location_assignment PIN_M23 -to io_button
+

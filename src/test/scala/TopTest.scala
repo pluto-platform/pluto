@@ -26,7 +26,9 @@ class TopTest extends AnyFlatSpec with ChiselScalatestTester {
   "top with cache" should "work" in {
     test(new TopCached).withAnnotations(Seq(WriteVcdAnnotation)) {dut =>
       dut.clock.setTimeout(0)
-      dut.clock.step(5000)
+      dut.clock.step(4000)
+      dut.io.button.poke(1.B)
+      dut.clock.step(2000)
     }
   }
 
