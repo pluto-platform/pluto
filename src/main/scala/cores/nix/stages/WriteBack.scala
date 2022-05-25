@@ -68,7 +68,7 @@ class WriteBack extends PipelineStage(new MemoryToWriteBack, new Bundle {}) {
 
   io.forwarding.set(
     _.destination := upstream.reg.registerWriteBack.index,
-    _.canForward := upstream.reg.withSideEffects.writeRegisterFile,
+    _.canForward := upstream.reg.withSideEffects.writeRegisterFile && upstream.reg.withSideEffects.hasMemoryAccess,
     _.value := writeBackValue
   )
 

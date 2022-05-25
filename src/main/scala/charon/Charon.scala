@@ -186,11 +186,24 @@ class ChannelMux[T <: Tilelink.Channel](channel: => T) extends Module {
     val in = Vec(2, Decoupled(channel)).flipped
     val out = Decoupled(channel)
   })
+
+  val prevTurnReg = RegInit(0.B)
+
+  val contention = io.in(0).valid && io.in(1).valid
+
+  val aTurn = io.in(0).valid || (contention && prevTurnReg)
+  val bTurn = io.in(1).valid || (contention && !prevTurnReg)
+
   io.in.foreach(_.ready := 0.B)
-  when(io.in(0).valid) {
+  when(aTurn) {
     io.out <> io.in(0)
   } otherwise {
     io.out <> io.in(1)
+  }
+  when(aTurn) {
+    prevTurnReg := 0.B
+  }.elsewhen(bTurn) {
+    prevTurnReg := 1.B
   }
 
 }

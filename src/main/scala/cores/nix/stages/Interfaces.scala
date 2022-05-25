@@ -127,6 +127,7 @@ object Interfaces {
       val isMret = Bool()
       val writeRegisterFile = Bool()
       val writeCsrFile = Bool()
+      val hasMemoryAccess = Bool()
     }
 
   }

@@ -8,6 +8,7 @@ import cores.nix.{Branching, Forwarding, Hazard}
 import Interfaces.{ExecuteToMemory, MemoryToWriteBack}
 import cores.modules.BitMasker.BitMaskerFunction
 import cores.nix.Pipeline.DataChannel
+import cores.lib.Exception.Cause
 
 class Memory extends PipelineStage(new ExecuteToMemory, new MemoryToWriteBack) {
 
@@ -31,10 +32,17 @@ class Memory extends PipelineStage(new ExecuteToMemory, new MemoryToWriteBack) {
     _.function := bitMaskerFunction
   )
 
+  val misalignedAddress =
+    (memoryAccessWidth === MemoryAccessWidth.Word && upstream.reg.aluResult(1,0) =/= "b00".U) ||
+      (memoryAccessWidth === MemoryAccessWidth.HalfWord && upstream.reg.aluResult(0) =/= "b0".U)
+
+  val misalignmentException = misalignedAddress && upstream.reg.withSideEffects.hasMemoryAccess
+  val exception = upstream.reg.withSideEffects.exception || misalignmentException
+
   val memNotReady = !io.dataRequest.ready && upstream.reg.withSideEffects.hasMemoryAccess
 
   io.branching.set(
-    _.jump := upstream.reg.withSideEffects.jump && !downstream.flowControl.stall,
+    _.jump := upstream.reg.withSideEffects.jump && !downstream.flowControl.stall && !downstream.flowControl.flush,
     _.target := upstream.reg.target
   )
 
@@ -52,7 +60,7 @@ class Memory extends PipelineStage(new ExecuteToMemory, new MemoryToWriteBack) {
 
   io.forwarding.set(
     _.destination := upstream.reg.destination,
-    _.canForward := upstream.reg.withSideEffects.hasRegisterWriteBack && !upstream.reg.withSideEffects.isLoad,
+    _.canForward := upstream.reg.withSideEffects.hasRegisterWriteBack && !upstream.reg.withSideEffects.hasMemoryAccess,
     _.value := upstream.reg.aluResult
   )
 
@@ -74,9 +82,9 @@ class Memory extends PipelineStage(new ExecuteToMemory, new MemoryToWriteBack) {
     _.registerWriteBack.index := upstream.reg.destination,
     _.accessWidth := memoryAccessWidth,
     _.signed := !upstream.reg.funct3(2),
-    _.cause := upstream.reg.cause,
+    _.cause := Mux(misalignmentException && !upstream.reg.withSideEffects.exception, Cause.LoadAddressMisaligned, upstream.reg.cause), // TODO: handle load and store
     _.withSideEffects.set(
-      _.exception := upstream.reg.withSideEffects.exception,
+      _.exception := exception,
       _.isLoad := upstream.reg.withSideEffects.isLoad,
       _.isEcall := upstream.reg.withSideEffects.isEcall,
       _.isMret := upstream.reg.withSideEffects.isMret,
