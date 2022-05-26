@@ -6,10 +6,11 @@ import lib.util.BundleItemAssignment
 import cores.nix
 import cores.nix.{ExceptionUnit, Forwarding}
 import Interfaces.MemoryToWriteBack
-import cores.lib.ControlTypes.{MemoryAccessResult, MemoryAccessWidth}
+import cores.lib.ControlTypes.{MemoryAccessResult, MemoryAccessWidth, MemoryOperation}
 import cores.modules.{ControlAndStatusRegisterFile, IntegerRegisterFile, PipelineStage}
 import cores.nix.Pipeline.DataChannel
 import cores.lib.Exception
+import cores.lib.Exception.Cause
 import lib.LookUp.lookUp
 
 class WriteBack extends PipelineStage(new MemoryToWriteBack, new Bundle {}) {
@@ -42,10 +43,15 @@ class WriteBack extends PipelineStage(new MemoryToWriteBack, new Bundle {}) {
   )
   io.dataResponse.ready := !downstream.flowControl.stall
 
+  val cause = MuxCase(upstream.reg.cause, Seq(
+    upstream.reg.withSideEffects.exception -> upstream.reg.cause,
+    memoryAccessError -> Mux(upstream.reg.memoryOperation === MemoryOperation.Read, Cause.LoadAccessFault, Cause.StoreAccessFault)
+  ))
+
   io.exception.set(
     _.exception.set(
       _.exception := upstream.reg.withSideEffects.exception || memoryAccessError,
-      _.cause := Mux(memoryAccessError, Exception.Cause.LoadAccessFault, upstream.reg.cause),
+      _.cause := cause,
       _.pc := upstream.reg.pc,
       _.value := 0.U
     ),
@@ -68,7 +74,7 @@ class WriteBack extends PipelineStage(new MemoryToWriteBack, new Bundle {}) {
 
   io.forwarding.set(
     _.destination := upstream.reg.registerWriteBack.index,
-    _.canForward := upstream.reg.withSideEffects.writeRegisterFile && upstream.reg.withSideEffects.hasMemoryAccess,
+    _.canForward := upstream.reg.withSideEffects.writeRegisterFile && !(upstream.reg.withSideEffects.hasMemoryAccess && upstream.reg.memoryOperation === MemoryOperation.Write),
     _.value := writeBackValue
   )
 

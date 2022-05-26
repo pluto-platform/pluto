@@ -15,9 +15,12 @@ class TopCached extends Module {
     val led = Output(Bool())
     val pc = Output(UInt(10.W))
     val rx = Input(Bool())
+    val cts = Output(Bool())
     val tx = Output(Bool())
     val button = Input(Bool())
   })
+
+  io.cts := 1.B
 
 
 
@@ -40,6 +43,7 @@ class TopCached extends Module {
   val ram = Module(new BlockRam(1024))
   val button = Module(new Button)
   core.io.externalInterrupt := button.io.interrupt
+  core.io.customInterrupts(0) := uart.io.interrupt
   button.io.button := io.button
 
   io.pc := core.io.instructionRequester.a.valid ## prog.io.tilelink.d.valid ## core.io.dataRequester.a.valid ## ram.io.tilelink.d.valid
@@ -52,9 +56,11 @@ class TopCached extends Module {
     Seq(core.io.instructionRequester, core.io.dataRequester),
     Seq(
       prog.io.tilelink.bind(0x0),
-      led.io.tilelink.bind(0x10000),
       uart.io.tilelinkInterface.bind(0x20000),
-      button.io.tilelink.bind(0x30000),
+      Combine(Seq(
+        led.io.tilelink.bind(0x10000),
+        button.io.tilelink.bind(0x30000)
+      )),
       ram.io.tilelink.bind(0x80000000L)
     )
   )

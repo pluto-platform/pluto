@@ -3,9 +3,10 @@ package cores.nix.stages
 import chisel3._
 import lib.util.BundleItemAssignment
 import cores.modules.{BitMasker, ControlAndStatusRegisterFile, PipelineStage}
-import cores.lib.ControlTypes.MemoryAccessWidth
+import cores.lib.ControlTypes.{MemoryAccessWidth, MemoryOperation}
 import cores.nix.{Branching, Forwarding, Hazard}
 import Interfaces.{ExecuteToMemory, MemoryToWriteBack}
+import chisel3.util.MuxCase
 import cores.modules.BitMasker.BitMaskerFunction
 import cores.nix.Pipeline.DataChannel
 import cores.lib.Exception.Cause
@@ -38,6 +39,10 @@ class Memory extends PipelineStage(new ExecuteToMemory, new MemoryToWriteBack) {
 
   val misalignmentException = misalignedAddress && upstream.reg.withSideEffects.hasMemoryAccess
   val exception = upstream.reg.withSideEffects.exception || misalignmentException
+  val cause = MuxCase(upstream.reg.cause, Seq(
+    upstream.reg.withSideEffects.exception -> upstream.reg.cause,
+    misalignmentException -> Mux(upstream.reg.memoryOperation === MemoryOperation.Read, Cause.LoadAddressMisaligned, Cause.StoreAddressMisaligned)
+  ))
 
   val memNotReady = !io.dataRequest.ready && upstream.reg.withSideEffects.hasMemoryAccess
 
@@ -82,7 +87,8 @@ class Memory extends PipelineStage(new ExecuteToMemory, new MemoryToWriteBack) {
     _.registerWriteBack.index := upstream.reg.destination,
     _.accessWidth := memoryAccessWidth,
     _.signed := !upstream.reg.funct3(2),
-    _.cause := Mux(misalignmentException && !upstream.reg.withSideEffects.exception, Cause.LoadAddressMisaligned, upstream.reg.cause), // TODO: handle load and store
+    _.cause := cause,
+    _.memoryOperation := upstream.reg.memoryOperation,
     _.withSideEffects.set(
       _.exception := exception,
       _.isLoad := upstream.reg.withSideEffects.isLoad,

@@ -12,11 +12,13 @@ object Exception {
     val None = Value(0.U)
     val LoadAddressMisaligned = Value(4.U)
     val LoadAccessFault = Value(5.U)
+    val StoreAddressMisaligned = Value(6.U)
+    val StoreAccessFault = Value(7.U)
     val EnvironmentCallFromMachineMode = Value(11.U)
     val MachineSoftwareInterrupt = Value(((1L << 31) | 3).U)
     val MachineTimerInterrupt = Value(((1L << 31) | 7).U)
     val MachineExternalInterrupt = Value(((1L << 31) | 11).U)
-
+    val CustomInterrupt = Seq.tabulate(16)(i => ((1L << 31) | (16+i)).U)
   }
   implicit class CauseTypeExtender(x: Cause.Type) {
     def isInterrupt: Bool = x.asUInt.apply(31)

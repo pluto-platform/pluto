@@ -113,6 +113,7 @@ object Interfaces {
     }
 
     val accessWidth = MemoryAccessWidth()
+    val memoryOperation = MemoryOperation()
     val signed = Bool()
 
     val cause = Exception.Cause()
@@ -127,7 +128,6 @@ object Interfaces {
       val isMret = Bool()
       val writeRegisterFile = Bool()
       val writeCsrFile = Bool()
-      val hasMemoryAccess = Bool()
     }
 
   }

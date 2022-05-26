@@ -41,7 +41,7 @@ object Charon {
   }
 
   object Combine {
-    def apply(responders: Seq[(Tilelink.Agent.Interface.Responder, Seq[AddressRange])]): Tilelink.Agent.Interface.Responder = {
+    def apply(responders: Seq[(Tilelink.Agent.Interface.Responder, Seq[AddressRange])]): (Tilelink.Agent.Interface.Responder, Seq[AddressRange]) = {
 
       val addressWidth = log2Ceil(responders.flatMap(_._2.map(r => r.base + r.length)).max)
 
@@ -55,7 +55,7 @@ object Charon {
           port <> responder
         }
 
-      combiner.io.root
+      (combiner.io.root, responders.flatMap(_._2))
 
     }
   }
@@ -187,12 +187,12 @@ class ChannelMux[T <: Tilelink.Channel](channel: => T) extends Module {
     val out = Decoupled(channel)
   })
 
-  val prevTurnReg = RegInit(0.B)
+  val prevTurnReg = RegInit(1.B)
 
   val contention = io.in(0).valid && io.in(1).valid
 
-  val aTurn = io.in(0).valid || (contention && prevTurnReg)
-  val bTurn = io.in(1).valid || (contention && !prevTurnReg)
+  val aTurn = (io.in(0).valid && !contention) || (contention && prevTurnReg)
+  val bTurn = (io.in(1).valid && !contention) || (contention && !prevTurnReg)
 
   io.in.foreach(_.ready := 0.B)
   when(aTurn) {

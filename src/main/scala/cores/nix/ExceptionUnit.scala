@@ -1,10 +1,11 @@
 package cores.nix
 
 import chisel3._
+import chisel3.util.{PriorityEncoder, PriorityEncoderOH}
 import cores.lib.Exception
-import cores.lib.Exception.ExceptionBundle
+import cores.lib.Exception.{Cause, ExceptionBundle}
 import cores.nix.ExceptionUnit.WriteBackChannel
-import lib.util.{BoolVec, BundleItemAssignment}
+import lib.util.{BoolVec, BundleItemAssignment, SeqToVecMethods}
 
 object ExceptionUnit {
   class ProgramCounterChannel extends Bundle {
@@ -63,7 +64,7 @@ class ExceptionUnit extends Module {
         _.exception := 1.B,
         _.value := 0.U,
         _.pc := restartPc,
-        _.cause := Exception.Cause.MachineExternalInterrupt
+        _.cause := Cause.safe((1L<<31).U | PriorityEncoder(Seq.fill(16)(0.B).toVec ++ customInterrupts))._1
       )
     }.elsewhen(io.csr.interruptPending.external && io.csr.interruptEnable.external && !io.writeBack.isBubble) {
       io.programCounter.jump := 1.B
