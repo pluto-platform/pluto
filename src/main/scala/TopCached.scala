@@ -1,11 +1,12 @@
 import charon.Charon.{Combine, Link, RangeBinder}
 import charon.Tilelink
 import chisel3._
+import chisel3.experimental.attach
 import lib.util.{BundleItemAssignment, Delay, Exponential, SeqToTransposable, SeqToVecMethods}
 import cores.lib.ControlTypes.{MemoryAccessResult, MemoryOperation}
 import cores.nix.Nix
 import peripherals.uart.{Uart, UartReceiver, UartTransmitter}
-import peripherals.{BlockRam, Button, Leds, ProgramMemory, SevenSegmentDisplay}
+import peripherals.{BlockRam, Button, Leds, ProgramMemory, SevenSegmentDisplay, Sram}
 
 import java.io.{File, PrintWriter}
 import java.nio.file.{Files, Paths}
@@ -18,6 +19,7 @@ class TopCached extends Module {
     val cts = Output(Bool())
     val tx = Output(Bool())
     val button = Input(Bool())
+    val sram = new Sram.IO
   })
 
   io.cts := 1.B
@@ -42,6 +44,10 @@ class TopCached extends Module {
   val led = Module(new Leds(1))
   val ram = Module(new BlockRam(1024))
   val button = Module(new Button)
+  val sram = Module(new Sram)
+  sram.io.sram <> io.sram
+  attach(sram.io.sram.data, io.sram.data)
+
   core.io.externalInterrupt := button.io.interrupt
   core.io.customInterrupts(0) := uart.io.interrupt
   button.io.button := io.button
@@ -61,7 +67,8 @@ class TopCached extends Module {
         led.io.tilelink.bind(0x10000),
         button.io.tilelink.bind(0x30000)
       )),
-      ram.io.tilelink.bind(0x80000000L)
+      ram.io.tilelink.bind(0x80000000L),
+      sram.io.tilelink.bind(0x90000000L)
     )
   )
 

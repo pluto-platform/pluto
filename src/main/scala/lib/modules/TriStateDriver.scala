@@ -1,8 +1,19 @@
 package lib.modules
 
 import chisel3._
-import chisel3.experimental.Analog
-import chisel3.util.HasBlackBoxInline
+import chisel3.experimental.{Analog, attach}
+import chisel3.util.{HasBlackBoxInline, Valid, ValidIO}
+
+object TriStateDriver {
+  def apply(wire: Analog): (UInt, ValidIO[UInt]) = {
+    val mod = Module(new TriStateDriver(wire.getWidth))
+    attach(wire, mod.io.bus)
+    val driveInterface = Wire(Valid(UInt(wire.getWidth.W)))
+    mod.io.drive := driveInterface.valid
+    mod.io.driveData := driveInterface.bits
+    (mod.io.busData, driveInterface)
+  }
+}
 
 /**
  * This module allows to connect to tri-state busses with Chisel by using a Verilog blackbox.
@@ -16,9 +27,9 @@ class TriStateDriver(width: Int) extends BlackBox with HasBlackBoxInline {
     val drive =       Input(Bool())           // when asserted the module drives the bus
   })
 
-  setInline("lib.modules.TriStateDriver.v",
+  setInline("TriStateDriver.v",
     s"""
-       |module lib.modules.TriStateDriver(
+       |module TriStateDriver(
        |    output [${width-1}:0] busData,
        |    input [${width-1}:0] driveData,
        |    inout [${width-1}:0] bus,
