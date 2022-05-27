@@ -6,7 +6,15 @@ import chisel3.util.{DecoupledIO, MuxLookup, Queue, RegEnable, is, switch}
 import charon.Tilelink
 import charon.Tilelink.{Agent, Operation, Response}
 import lib.util.{BundleItemAssignment, ByteSplitter, Delay, OneOf, SeqConcat, SeqToVecMethods}
+
+
 object Uart {
+  def apply(initialBaud: Int, frequency: Int)(rx: Bool, tx: Bool): Uart = {
+    val mod = Module(new Uart(initialBaud, frequency))
+    mod.io.rx := rx
+    tx := mod.io.tx
+    mod
+  }
 }
 
 class Uart(initialBaud: Int, frequency: Int) extends Module {

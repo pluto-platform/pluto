@@ -7,6 +7,10 @@ import chisel3.util.log2Ceil
 import lib.Types.Byte
 import lib.util.{BundleItemAssignment, ByteSplitter, Delay, SeqConcat, SeqToVecMethods}
 
+object BlockRam {
+  def apply(size: Int): BlockRam = Module(new BlockRam(size))
+}
+
 class BlockRam(size: Int) extends Module {
 
   val io = IO(new Bundle {

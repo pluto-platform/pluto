@@ -2,7 +2,7 @@ package peripherals
 
 import charon.Tilelink
 import chisel3._
-import chisel3.experimental.Analog
+import chisel3.experimental.{Analog, attach}
 import lib.modules.TriStateDriver
 import lib.util.{BundleItemAssignment, ByteSplitter}
 
@@ -15,6 +15,13 @@ object Sram {
     val writeEnable = Output(Bool())
     val chipSelect = Output(Bool())
     val strobe = Output(Vec(2,Bool()))
+  }
+
+  def apply(interface: IO): Sram = {
+    val mod = Module(new Sram)
+    mod.io.sram <> interface
+    attach(mod.io.sram.data, interface.data)
+    mod
   }
 
 }

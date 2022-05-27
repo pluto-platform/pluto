@@ -5,6 +5,14 @@ import charon.Tilelink.Operation
 import chisel3._
 import lib.util.{BundleItemAssignment, ByteSplitter, SeqConcat}
 
+object Leds {
+  def apply(out: UInt): Leds = {
+    val mod = Module(new Leds(out.getWidth))
+    out := mod.io.leds
+    mod
+  }
+}
+
 class Leds(n: Int) extends Module {
 
   val io = IO(new Bundle {

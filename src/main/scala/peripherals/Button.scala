@@ -5,6 +5,14 @@ import chisel3._
 import chisel3.util.ShiftRegister
 import lib.util.{BundleItemAssignment, ByteSplitter, rising, synchronize}
 
+object Button {
+  def apply(button: Bool): Button = {
+    val mod = Module(new Button)
+    mod.io.button := button
+    mod
+  }
+}
+
 class Button extends Module {
 
   val io = IO(new Bundle {

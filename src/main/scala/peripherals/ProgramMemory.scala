@@ -6,6 +6,10 @@ import chisel3._
 import chisel3.util.log2Ceil
 import lib.util.{BundleItemAssignment, ByteSplitter, Delay}
 
+object ProgramMemory {
+  def apply(words: Seq[BigInt]): ProgramMemory = Module(new ProgramMemory(words))
+}
+
 class ProgramMemory(words: Seq[BigInt]) extends Module {
 
   val io = IO(new Bundle {

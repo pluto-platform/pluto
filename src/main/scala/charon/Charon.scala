@@ -20,6 +20,9 @@ object Charon {
     def apply(requester: Tilelink.Agent.Interface.Requester, responders: Seq[(Tilelink.Agent.Interface.Responder, Seq[AddressRange])]): Unit = apply(Seq(requester), responders)
     def apply(requesters: Seq[Tilelink.Agent.Interface.Requester], responder: (Tilelink.Agent.Interface.Responder, Seq[AddressRange])): Unit = apply(requesters, Seq(responder))
     def apply(requester: Tilelink.Agent.Interface.Requester, responder: (Tilelink.Agent.Interface.Responder, Seq[AddressRange])): Unit = apply(Seq(requester), Seq(responder))
+    def apply(requester: Tilelink.Agent.Interface.Requester, requesters: Tilelink.Agent.Interface.Requester*)(responder: (Tilelink.Agent.Interface.Responder, Seq[AddressRange]), responders: (Tilelink.Agent.Interface.Responder, Seq[AddressRange])*): Unit = {
+      apply(requester +: requesters, responder +: responders)
+    }
   }
 
   object Bridge {
@@ -57,6 +60,9 @@ object Charon {
 
       (combiner.io.root, responders.flatMap(_._2))
 
+    }
+    def apply(responder: (Tilelink.Agent.Interface.Responder, Seq[AddressRange]), responders: (Tilelink.Agent.Interface.Responder, Seq[AddressRange])*): (Tilelink.Agent.Interface.Responder, Seq[AddressRange]) ={
+      apply(responder +: responders)
     }
   }
 

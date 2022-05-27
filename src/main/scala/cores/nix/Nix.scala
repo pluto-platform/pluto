@@ -8,6 +8,19 @@ import cores.PlutoCore
 import cores.lib.ControlTypes.{MemoryAccessResult, MemoryOperation}
 import lib.util.{BundleItemAssignment, ByteSplitter, SeqConcat, SeqToVecMethods}
 
+object Nix {
+  def apply(interrupts: (PlutoCore.CoreIO => Any)*): Nix = {
+    val nix = Module(new Nix)
+    nix.io.set(
+      _.externalInterrupt := 0.B,
+      _.timerInterrupt := 0.B,
+      _.customInterrupts := Seq.fill(16)(0.B).toVec
+    )
+    interrupts.foreach(f => f(nix.io))
+    nix
+  }
+}
+
 class Nix extends PlutoCore {
 
   val pipeline = Module(new Pipeline())
