@@ -12,7 +12,6 @@ class TopCached extends Module {
     val rx = Input(Bool())
     val tx = Output(Bool())
     val button = Input(Bool())
-    val sram = new Sram.IO
   })
 
   val prog = ProgramMemory(Binaries.loadWords("../pluto-rt/rust.bin"))
@@ -20,7 +19,6 @@ class TopCached extends Module {
   val led = Leds(io.led)
   val ram = BlockRam(1024)
   val button = Button(io.button)
-  val sram = Sram(io.sram)
 
   val core = Nix(
     _.externalInterrupt := button.io.interrupt,
@@ -37,8 +35,7 @@ class TopCached extends Module {
       led.io.tilelink.bind(0x10000),
       button.io.tilelink.bind(0x30000)
     ),
-    ram.io.tilelink.bind(0x80000000L),
-    sram.io.tilelink.bind(0x90000000L)
+    ram.io.tilelink.bind(0x80000000L)
   )
 }
 
