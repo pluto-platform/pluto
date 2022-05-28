@@ -14,7 +14,7 @@ class TopCached extends Module {
     val button = Input(Bool())
   })
 
-  val prog = ProgramMemory(Binaries.loadWords("../pluto-rt/rust.bin"))
+  val prog = ProgramMemory(Binaries.loadBytes("../pluto-rt/rust.bin"))
   val uart = Uart(115200, 50000000)(io.rx, io.tx)
   val led = Leds(io.led)
   val ram = BlockRam(1024)
